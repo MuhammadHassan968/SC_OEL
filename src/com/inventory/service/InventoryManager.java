@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
  *   <li>Removing items safely by ID.</li>
  *   <li>Monitoring stock level thresholds (In Stock, Low Stock, Out of Stock).</li>
  * </ul>
- * </p>
  *
  * @author Muhammad Hassan
  * @version 1.0

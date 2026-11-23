@@ -27,7 +27,6 @@ import java.util.Optional;
  *   <li>Search by item name or ID and filtering by stock status.</li>
  *   <li>Real-time dashboard metrics (Total Items, Total Units, Low Stock, Out of Stock).</li>
  * </ul>
- * </p>
  *
  * @author Muhammad Hassan
  * @version 1.0
@@ -36,28 +35,37 @@ public class InventoryGUI extends JFrame {
 
     private static final long serialVersionUID = 1L;
 
-    // Service controller
+    /** Service controller for managing inventory repository. */
     private final InventoryManager manager;
 
-    // UI Form Components
+    /** Text input field for Item ID. */
     private JTextField txtId;
+    /** Text input field for Item Name. */
     private JTextField txtName;
+    /** Text input field for Quantity. */
     private JTextField txtQuantity;
+    /** Selection dropdown for Stock Status override. */
     private JComboBox<String> comboStatus;
+    /** Text field for real-time search queries. */
     private JTextField txtSearch;
+    /** Dropdown for status-based filtering. */
     private JComboBox<String> comboFilter;
 
-    // Dashboard Metric Labels
+    /** Metric label for Total Items. */
     private JLabel lblTotalItems;
+    /** Metric label for Total Quantity Units. */
     private JLabel lblTotalUnits;
+    /** Metric label for Low Stock count. */
     private JLabel lblLowStock;
+    /** Metric label for Out of Stock count. */
     private JLabel lblOutOfStock;
 
-    // Table Components
+    /** Main inventory display table. */
     private JTable itemTable;
+    /** Table data model. */
     private DefaultTableModel tableModel;
 
-    // Selected item tracking
+    /** Currently selected item ID in the UI. */
     private int selectedItemId = -1;
 
     /**

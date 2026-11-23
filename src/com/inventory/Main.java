@@ -14,12 +14,18 @@ import javax.swing.*;
  *   <li>Instantiating the domain service layer ({@link InventoryManager}).</li>
  *   <li>Launching the graphical user interface ({@link InventoryGUI}) on the Swing Event Dispatch Thread (EDT).</li>
  * </ul>
- * </p>
  *
  * @author Muhammad Hassan
  * @version 1.0
  */
 public class Main {
+
+    /**
+     * Private constructor to prevent instantiation of launcher class.
+     */
+    private Main() {
+        // Prevent instantiation
+    }
 
     /**
      * Application entry point.

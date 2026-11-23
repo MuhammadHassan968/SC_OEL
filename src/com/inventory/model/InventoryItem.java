@@ -16,7 +16,6 @@ import java.util.Objects;
  *   <li>Name must not be null or blank.</li>
  *   <li>Quantity must be non-negative.</li>
  * </ul>
- * </p>
  *
  * @author Muhammad Hassan
  * @version 1.0
@@ -26,10 +25,15 @@ public class InventoryItem implements Serializable {
     private static final long serialVersionUID = 1L;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    /** Unique identification number for the inventory item. */
     private int id;
+    /** Commercial name of the product. */
     private String name;
+    /** Current quantity available in stock. */
     private int quantity;
+    /** Calculated or assigned stock level status. */
     private StockStatus status;
+    /** Timestamp string representing the most recent modification. */
     private String lastUpdated;
 
     /**

@@ -9,7 +9,6 @@ package com.inventory.model;
  *   <li>{@link #LOW_STOCK}: Quantity is between 1 and 5 (inclusive).</li>
  *   <li>{@link #OUT_OF_STOCK}: Quantity is 0.</li>
  * </ul>
- * </p>
  *
  * @author Muhammad Hassan
  * @version 1.0
