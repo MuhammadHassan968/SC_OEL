@@ -94,7 +94,7 @@ public class InventoryGUI extends JFrame {
     }
 
     private void initUI() {
-        setTitle("Store Inventory Management System");
+        setTitle("HR Traders - Inventory Management System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 780);
         setMinimumSize(new Dimension(980, 680));
@@ -128,11 +128,11 @@ public class InventoryGUI extends JFrame {
         JPanel titlePanel = new JPanel(new GridLayout(2, 1, 2, 2));
         titlePanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("Store Inventory Management System");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        JLabel titleLabel = new JLabel("HR Traders");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
         titleLabel.setForeground(TEXT_PRIMARY);
 
-        JLabel subLabel = new JLabel("Real-time stock tracking, valuation analytics, and store operations");
+        JLabel subLabel = new JLabel("Inventory Management System | Real-time stock tracking & valuation analytics");
         subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         subLabel.setForeground(TEXT_MUTED);
 
@@ -484,12 +484,12 @@ public class InventoryGUI extends JFrame {
         lblStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lblStatus.setForeground(TEXT_MUTED);
 
-        JLabel lblVersion = new JLabel("Java 21 Swing • Full SaaS Suite with CSV Export & Valuation");
-        lblVersion.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        lblVersion.setForeground(TEXT_MUTED);
+        JLabel lblDesigner = new JLabel("Designed by Muhammad Hassan");
+        lblDesigner.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblDesigner.setForeground(TEXT_PRIMARY);
 
         statusBar.add(lblStatus, BorderLayout.WEST);
-        statusBar.add(lblVersion, BorderLayout.EAST);
+        statusBar.add(lblDesigner, BorderLayout.EAST);
         return statusBar;
     }
 
@@ -537,11 +537,36 @@ public class InventoryGUI extends JFrame {
     }
 
     private void populateSampleData() {
-        manager.addItem(new InventoryItem(0, "Logitech MX Master 3S", "Accessories", 99.99, 12));
-        manager.addItem(new InventoryItem(0, "Mechanical Keyboard TKL", "Accessories", 79.50, 4));
-        manager.addItem(new InventoryItem(0, "USB-C Fast Charging Cable", "Electronics", 14.99, 28));
-        manager.addItem(new InventoryItem(0, "Dell UltraSharp 27\" Monitor", "Electronics", 349.00, 2));
-        manager.addItem(new InventoryItem(0, "Ergonomic Desk Chair Pad", "Office Supplies", 35.00, 0));
+        manager.addItem(new InventoryItem(0, "Apple MacBook Pro 16\" M3 Max", "Electronics", 3499.00, 6));
+        manager.addItem(new InventoryItem(0, "Dell XPS 15 OLED Laptop", "Electronics", 1899.00, 4));
+        manager.addItem(new InventoryItem(0, "ASUS ROG Zephyrus G14", "Electronics", 1599.99, 3));
+        manager.addItem(new InventoryItem(0, "NVIDIA GeForce RTX 4090 24GB", "Electronics", 1799.00, 2));
+        manager.addItem(new InventoryItem(0, "AMD Ryzen 9 7950X Processor", "Electronics", 549.00, 8));
+        manager.addItem(new InventoryItem(0, "Intel Core i9-14900K Desktop CPU", "Electronics", 589.00, 5));
+        manager.addItem(new InventoryItem(0, "Samsung 990 PRO 2TB NVMe SSD", "Electronics", 179.99, 18));
+        manager.addItem(new InventoryItem(0, "Corsair Vengeance 32GB DDR5 RAM", "Electronics", 119.99, 14));
+        manager.addItem(new InventoryItem(0, "Dell UltraSharp 27\" 4K Monitor", "Electronics", 449.00, 7));
+        manager.addItem(new InventoryItem(0, "LG UltraGear 34\" Curved Gaming Monitor", "Electronics", 799.99, 3));
+        manager.addItem(new InventoryItem(0, "Sony WH-1000XM5 Wireless Headphones", "Electronics", 398.00, 9));
+        manager.addItem(new InventoryItem(0, "Apple iPad Air 11\" M2 128GB", "Electronics", 599.00, 11));
+        manager.addItem(new InventoryItem(0, "Samsung Galaxy Tab S9 Ultra", "Electronics", 1199.99, 2));
+        manager.addItem(new InventoryItem(0, "Logitech MX Master 3S Wireless Mouse", "Accessories", 99.99, 24));
+        manager.addItem(new InventoryItem(0, "Keychron Q1 Pro Mechanical Keyboard", "Accessories", 199.00, 8));
+        manager.addItem(new InventoryItem(0, "Logitech Brio 4K Ultra HD Webcam", "Electronics", 199.99, 12));
+        manager.addItem(new InventoryItem(0, "Shure SM7B Cardioid Dynamic Mic", "Electronics", 399.00, 4));
+        manager.addItem(new InventoryItem(0, "Elgato Stream Deck MK.2", "Accessories", 149.99, 6));
+        manager.addItem(new InventoryItem(0, "ASUS ROG Rapture GT-AXE16000 Router", "Electronics", 599.99, 3));
+        manager.addItem(new InventoryItem(0, "Anker 737 Power Bank 24,000mAh", "Electronics", 149.99, 15));
+        manager.addItem(new InventoryItem(0, "Belkin MagSafe 3-in-1 Wireless Charger", "Accessories", 129.99, 10));
+        manager.addItem(new InventoryItem(0, "Seagate IronWolf 8TB NAS HDD", "Electronics", 199.99, 5));
+        manager.addItem(new InventoryItem(0, "Corsair RM1000x 1000W Power Supply", "Electronics", 189.99, 7));
+        manager.addItem(new InventoryItem(0, "NZXT Kraken Elite 360 RGB Liquid Cooler", "Electronics", 279.99, 4));
+        manager.addItem(new InventoryItem(0, "Apple Watch Ultra 2 GPS + Cellular", "Electronics", 799.00, 6));
+        manager.addItem(new InventoryItem(0, "Samsung Galaxy S24 Ultra 512GB", "Electronics", 1299.99, 8));
+        manager.addItem(new InventoryItem(0, "Sony PlayStation 5 Slim Digital", "Electronics", 449.99, 0));
+        manager.addItem(new InventoryItem(0, "Nintendo Switch OLED Model", "Electronics", 349.99, 0));
+        manager.addItem(new InventoryItem(0, "Meta Quest 3 128GB VR Headset", "Electronics", 499.99, 5));
+        manager.addItem(new InventoryItem(0, "Anker USB-C 100W Fast Charging Cable", "Accessories", 19.99, 35));
     }
 
     public void refreshTable() {

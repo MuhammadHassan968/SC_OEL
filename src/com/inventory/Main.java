@@ -48,9 +48,8 @@ public class Main {
                 InventoryGUI gui = new InventoryGUI(manager);
                 gui.setVisible(true);
                 System.out.println("=================================================");
-                System.out.println(" Store Inventory Management System (IMS) Started ");
-                System.out.println(" Developed with Java Swing & Modern SC Tools      ");
-                System.out.println(" Author: Muhammad Hassan                         ");
+                System.out.println(" HR Traders - Inventory Management System Started ");
+                System.out.println(" Designed by Muhammad Hassan                     ");
                 System.out.println("=================================================");
             } catch (Exception ex) {
                 System.err.println("Fatal Error during application startup: " + ex.getMessage());
