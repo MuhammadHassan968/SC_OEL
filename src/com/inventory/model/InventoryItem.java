@@ -8,17 +8,18 @@ import java.util.Objects;
 /**
  * Entity class representing an individual item in the inventory.
  * <p>
- * Encapsulates the item's unique identifier, name, current quantity,
+ * Encapsulates the item's unique identifier, name, category, unit price, current quantity,
  * automated stock status, and timestamp of the most recent modification.
  * Adheres to strict validation constraints:
  * <ul>
  *   <li>ID must be positive.</li>
  *   <li>Name must not be null or blank.</li>
+ *   <li>Price must be non-negative.</li>
  *   <li>Quantity must be non-negative.</li>
  * </ul>
  *
  * @author Muhammad Hassan
- * @version 1.0
+ * @version 2.0
  */
 public class InventoryItem implements Serializable {
 
@@ -29,6 +30,10 @@ public class InventoryItem implements Serializable {
     private int id;
     /** Commercial name of the product. */
     private String name;
+    /** Product category / department tag. */
+    private String category;
+    /** Unit price of the item. */
+    private double unitPrice;
     /** Current quantity available in stock. */
     private int quantity;
     /** Calculated or assigned stock level status. */
@@ -37,7 +42,7 @@ public class InventoryItem implements Serializable {
     private String lastUpdated;
 
     /**
-     * Constructs a new {@code InventoryItem} with an automatic status evaluation.
+     * Constructs a new {@code InventoryItem} with default category and zero price.
      *
      * @param id       Unique identifier for the item. Must be greater than 0.
      * @param name     Name of the inventory product. Cannot be null or blank.
@@ -45,17 +50,11 @@ public class InventoryItem implements Serializable {
      * @throws IllegalArgumentException if name is null/empty or quantity is negative.
      */
     public InventoryItem(int id, String name, int quantity) {
-        validateName(name);
-        validateQuantity(quantity);
-        this.id = id;
-        this.name = name.trim();
-        this.quantity = quantity;
-        this.status = StockStatus.determineStatus(quantity);
-        updateTimestamp();
+        this(id, name, "General", 0.0, quantity, null);
     }
 
     /**
-     * Constructs a new {@code InventoryItem} with explicitly specified status.
+     * Constructs a new {@code InventoryItem} with explicitly specified status and default category/price.
      *
      * @param id       Unique identifier for the item. Must be greater than 0.
      * @param name     Name of the inventory product. Cannot be null or blank.
@@ -64,10 +63,42 @@ public class InventoryItem implements Serializable {
      * @throws IllegalArgumentException if name is null/empty or quantity is negative.
      */
     public InventoryItem(int id, String name, int quantity, StockStatus status) {
+        this(id, name, "General", 0.0, quantity, status);
+    }
+
+    /**
+     * Constructs a new {@code InventoryItem} with category and price.
+     *
+     * @param id        Unique identifier for the item. Must be greater than 0.
+     * @param name      Name of the inventory product. Cannot be null or blank.
+     * @param category  Category or department tag.
+     * @param unitPrice Price per unit. Must be non-negative.
+     * @param quantity  Available stock quantity. Must be non-negative.
+     * @throws IllegalArgumentException if name is null/empty, price is negative, or quantity is negative.
+     */
+    public InventoryItem(int id, String name, String category, double unitPrice, int quantity) {
+        this(id, name, category, unitPrice, quantity, null);
+    }
+
+    /**
+     * Full constructor for {@code InventoryItem}.
+     *
+     * @param id        Unique identifier for the item. Must be greater than 0.
+     * @param name      Name of the inventory product. Cannot be null or blank.
+     * @param category  Category or department tag.
+     * @param unitPrice Price per unit. Must be non-negative.
+     * @param quantity  Available stock quantity. Must be non-negative.
+     * @param status    Explicit {@link StockStatus} override.
+     * @throws IllegalArgumentException if validation constraints fail.
+     */
+    public InventoryItem(int id, String name, String category, double unitPrice, int quantity, StockStatus status) {
         validateName(name);
+        validatePrice(unitPrice);
         validateQuantity(quantity);
         this.id = id;
         this.name = name.trim();
+        this.category = (category == null || category.trim().isEmpty()) ? "General" : category.trim();
+        this.unitPrice = unitPrice;
         this.quantity = quantity;
         this.status = (status != null) ? status : StockStatus.determineStatus(quantity);
         updateTimestamp();
@@ -82,6 +113,18 @@ public class InventoryItem implements Serializable {
     public static void validateName(String name) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Item name cannot be empty or whitespace.");
+        }
+    }
+
+    /**
+     * Validates that the unit price is non-negative.
+     *
+     * @param price Price value to validate.
+     * @throws IllegalArgumentException if price is less than 0.
+     */
+    public static void validatePrice(double price) {
+        if (price < 0.0) {
+            throw new IllegalArgumentException("Unit price cannot be negative: " + price);
         }
     }
 
@@ -104,61 +147,47 @@ public class InventoryItem implements Serializable {
         this.lastUpdated = LocalDateTime.now().format(DATE_FORMATTER);
     }
 
-    /**
-     * Retrieves the item's unique identifier.
-     *
-     * @return Integer ID.
-     */
     public int getId() {
         return id;
     }
 
-    /**
-     * Sets the item's unique identifier.
-     *
-     * @param id New unique identifier.
-     */
     public void setId(int id) {
         this.id = id;
     }
 
-    /**
-     * Retrieves the product name.
-     *
-     * @return Item name.
-     */
     public String getName() {
         return name;
     }
 
-    /**
-     * Updates the product name after validating constraints.
-     *
-     * @param name New valid product name.
-     * @throws IllegalArgumentException if name is empty or null.
-     */
     public void setName(String name) {
         validateName(name);
         this.name = name.trim();
         updateTimestamp();
     }
 
-    /**
-     * Retrieves the current stock quantity.
-     *
-     * @return Current quantity.
-     */
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = (category == null || category.trim().isEmpty()) ? "General" : category.trim();
+        updateTimestamp();
+    }
+
+    public double getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(double unitPrice) {
+        validatePrice(unitPrice);
+        this.unitPrice = unitPrice;
+        updateTimestamp();
+    }
+
     public int getQuantity() {
         return quantity;
     }
 
-    /**
-     * Updates the stock quantity, automatically recalibrates {@link StockStatus},
-     * and refreshes the modification timestamp.
-     *
-     * @param quantity New quantity (must be non-negative).
-     * @throws IllegalArgumentException if quantity is negative.
-     */
     public void setQuantity(int quantity) {
         validateQuantity(quantity);
         this.quantity = quantity;
@@ -167,38 +196,27 @@ public class InventoryItem implements Serializable {
     }
 
     /**
-     * Retrieves the current stock status.
+     * Calculates the total inventory value for this item (Unit Price * Quantity).
      *
-     * @return {@link StockStatus} indicating In Stock, Low Stock, or Out of Stock.
+     * @return Total value in currency units.
      */
+    public double getTotalValue() {
+        return unitPrice * quantity;
+    }
+
     public StockStatus getStatus() {
         return status;
     }
 
-    /**
-     * Explicitly sets the stock status.
-     *
-     * @param status New {@link StockStatus}.
-     */
     public void setStatus(StockStatus status) {
         this.status = (status != null) ? status : StockStatus.determineStatus(this.quantity);
         updateTimestamp();
     }
 
-    /**
-     * Retrieves the formatted timestamp of the most recent modification.
-     *
-     * @return Formatted date-time string.
-     */
     public String getLastUpdated() {
         return lastUpdated;
     }
 
-    /**
-     * Sets the last updated timestamp.
-     *
-     * @param lastUpdated Timestamp string.
-     */
     public void setLastUpdated(String lastUpdated) {
         this.lastUpdated = lastUpdated;
     }
@@ -218,7 +236,7 @@ public class InventoryItem implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("Item #%d: %s | Qty: %d | Status: %s | Updated: %s",
-                id, name, quantity, status.getDisplayName(), lastUpdated);
+        return String.format("Item #%d: %s [%s] | Price: $%.2f | Qty: %d | Total: $%.2f | Status: %s | Updated: %s",
+                id, name, category, unitPrice, quantity, getTotalValue(), status.getDisplayName(), lastUpdated);
     }
 }

@@ -4,30 +4,18 @@ import com.inventory.model.InventoryItem;
 import com.inventory.model.StockStatus;
 import com.inventory.service.InventoryManager;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Automated test suite validating all functional and non-functional requirements
- * of the Inventory Management System according to the OEL Rubric (CLO-5, Section 9).
- * <p>
- * Evaluates the following test cases:
- * <ul>
- *   <li>TC-01: Add a valid item &rarr; Item is added</li>
- *   <li>TC-02: Add an item with an empty name &rarr; Validation exception thrown</li>
- *   <li>TC-03: Add an item with a negative quantity &rarr; Validation exception thrown</li>
- *   <li>TC-04: Non-numeric quantity validation &rarr; NumberFormatException handled</li>
- *   <li>TC-05: View all items &rarr; All items displayed accurately</li>
- *   <li>TC-06: View an empty inventory &rarr; Appropriate empty state handled</li>
- *   <li>TC-07: Update an existing item &rarr; Details and stock status updated</li>
- *   <li>TC-08: Update a non-existing item &rarr; Handled gracefully without errors</li>
- *   <li>TC-09: Delete an existing item &rarr; Item successfully removed</li>
- *   <li>TC-10: Stock status automatic thresholds (0, 1-5, &gt;5) &rarr; Status classified correctly</li>
- * </ul>
- * </p>
+ * of the Inventory Management System according to the OEL Rubric (CLO-5, Section 9)
+ * and extended features (Pricing, Categories, and CSV Export).
  *
  * @author Muhammad Hassan
- * @version 1.0
+ * @version 2.0
  */
 public class InventoryTest {
 
@@ -52,6 +40,9 @@ public class InventoryTest {
         testUpdateNonExistingItem();
         testDeleteExistingItem();
         testStockStatusThresholds();
+        testPricingAndNetWorth();
+        testCategoryFiltering();
+        testExportCSV();
 
         printSummaryReport();
 
@@ -60,9 +51,6 @@ public class InventoryTest {
         }
     }
 
-    /**
-     * TC-01: Add a valid item &rarr; Item is added.
-     */
     private static void testAddValidItem() {
         testsRun++;
         String testId = "TC-01";
@@ -84,16 +72,12 @@ public class InventoryTest {
         }
     }
 
-    /**
-     * TC-02: Add an item with an empty name &rarr; Validation message shown / exception thrown.
-     */
     private static void testAddEmptyName() {
         testsRun++;
         String testId = "TC-02";
         String description = "Add item with empty name";
         try {
             InventoryManager manager = new InventoryManager();
-            // Test null and whitespace-only names
             boolean caughtNull = false;
             try {
                 manager.addItem(null, 10);
@@ -115,9 +99,6 @@ public class InventoryTest {
         }
     }
 
-    /**
-     * TC-03: Add an item with a negative quantity &rarr; Error message / exception thrown.
-     */
     private static void testAddNegativeQuantity() {
         testsRun++;
         String testId = "TC-03";
@@ -138,9 +119,6 @@ public class InventoryTest {
         }
     }
 
-    /**
-     * TC-04: Add an item with a non-numeric quantity &rarr; Error handled.
-     */
     private static void testNonNumericQuantityHandling() {
         testsRun++;
         String testId = "TC-04";
@@ -160,9 +138,6 @@ public class InventoryTest {
         }
     }
 
-    /**
-     * TC-05: View all items &rarr; All items displayed.
-     */
     private static void testViewAllItems() {
         testsRun++;
         String testId = "TC-05";
@@ -185,9 +160,6 @@ public class InventoryTest {
         }
     }
 
-    /**
-     * TC-06: View an empty inventory &rarr; Appropriate message / handled gracefully.
-     */
     private static void testViewEmptyInventory() {
         testsRun++;
         String testId = "TC-06";
@@ -204,9 +176,6 @@ public class InventoryTest {
         }
     }
 
-    /**
-     * TC-07: Update an existing item &rarr; Details updated.
-     */
     private static void testUpdateExistingItem() {
         testsRun++;
         String testId = "TC-07";
@@ -216,7 +185,6 @@ public class InventoryTest {
             InventoryItem original = manager.addItem("Original Monitor", 15);
             int itemId = original.getId();
 
-            // Update name and quantity to 3 (which must shift status to LOW_STOCK)
             boolean updated = manager.updateItem(itemId, "Updated 4K Monitor", 3);
             InventoryItem modified = manager.findById(itemId).orElse(null);
 
@@ -232,9 +200,6 @@ public class InventoryTest {
         }
     }
 
-    /**
-     * TC-08: Update a non-existing item &rarr; Handled gracefully.
-     */
     private static void testUpdateNonExistingItem() {
         testsRun++;
         String testId = "TC-08";
@@ -243,10 +208,7 @@ public class InventoryTest {
             InventoryManager manager = new InventoryManager();
             manager.addItem("Desk Lamp", 8);
 
-            // Attempt to update item with dummy ID 99999
             boolean result = manager.updateItem(99999, "Phantom Item", 5);
-
-            // Graceful handling means returns false without throwing an unhandled exception or corrupting state
             boolean pass = !result && manager.getItemCount() == 1;
 
             recordResult(testId, description, pass, pass ? "Handled gracefully: returned false without crashing" : "Failed to handle non-existing item cleanly");
@@ -255,9 +217,6 @@ public class InventoryTest {
         }
     }
 
-    /**
-     * TC-09: Delete an existing item &rarr; Item removed.
-     */
     private static void testDeleteExistingItem() {
         testsRun++;
         String testId = "TC-09";
@@ -279,9 +238,6 @@ public class InventoryTest {
         }
     }
 
-    /**
-     * TC-10: Stock status automatic threshold mapping &rarr; Status set correctly.
-     */
     private static void testStockStatusThresholds() {
         testsRun++;
         String testId = "TC-10";
@@ -303,6 +259,67 @@ public class InventoryTest {
         }
     }
 
+    private static void testPricingAndNetWorth() {
+        testsRun++;
+        String testId = "TC-11";
+        String description = "Pricing & Net Worth Valuation";
+        try {
+            InventoryManager manager = new InventoryManager();
+            manager.addItem("Gaming Laptop", "Electronics", 1200.00, 5); // 6000.00
+            manager.addItem("Wireless Mouse", "Accessories", 50.00, 10);  // 500.00
+
+            double totalVal = manager.getTotalInventoryValue();
+            boolean pass = Math.abs(totalVal - 6500.00) < 0.001;
+
+            recordResult(testId, description, pass, pass ? "Total Net Worth correctly calculated ($6,500.00)" : "Net worth calculation error");
+        } catch (Exception e) {
+            recordResult(testId, description, false, "Failed: " + e.getMessage());
+        }
+    }
+
+    private static void testCategoryFiltering() {
+        testsRun++;
+        String testId = "TC-12";
+        String description = "Category / Tag Filtering";
+        try {
+            InventoryManager manager = new InventoryManager();
+            manager.addItem("Keyboard", "Accessories", 40.00, 8);
+            manager.addItem("Mousepad", "Accessories", 15.00, 12);
+            manager.addItem("Coffee Beans", "Groceries", 18.00, 6);
+
+            List<InventoryItem> accessories = manager.filterByCategory("Accessories");
+            List<InventoryItem> groceries = manager.filterByCategory("Groceries");
+
+            boolean pass = accessories.size() == 2 && groceries.size() == 1;
+            recordResult(testId, description, pass, pass ? "Correctly filtered by category tags" : "Category filtering error");
+        } catch (Exception e) {
+            recordResult(testId, description, false, "Failed: " + e.getMessage());
+        }
+    }
+
+    private static void testExportCSV() {
+        testsRun++;
+        String testId = "TC-13";
+        String description = "1-Click CSV Report Export";
+        try {
+            InventoryManager manager = new InventoryManager();
+            manager.addItem("Office Chair", "Office Supplies", 150.00, 3);
+            File tempFile = File.createTempFile("inventory_test_export", ".csv");
+            tempFile.deleteOnExit();
+
+            manager.exportToCSV(tempFile);
+            boolean exists = tempFile.exists() && tempFile.length() > 0;
+            List<String> lines = Files.readAllLines(tempFile.toPath());
+            boolean hasHeader = lines.size() >= 2 && lines.get(0).contains("Item Name");
+            boolean hasData = lines.get(1).contains("Office Chair");
+
+            boolean pass = exists && hasHeader && hasData;
+            recordResult(testId, description, pass, pass ? "CSV file successfully exported with headers & data" : "CSV export failed");
+        } catch (Exception e) {
+            recordResult(testId, description, false, "Failed: " + e.getMessage());
+        }
+    }
+
     private static void recordResult(String testId, String description, boolean passed, String note) {
         if (passed) {
             testsPassed++;
@@ -317,7 +334,6 @@ public class InventoryTest {
         System.out.println("---------------------------------------------------------------------------------------------------------");
 
         for (String[] row : results) {
-            String statusFormatted = row[2].equals("PASS") ? "\u001B[32mPASS\u001B[0m" : "\u001B[31mFAIL\u001B[0m";
             System.out.printf("%-8s | %-32s | %-6s | %-40s%n", row[0], row[1], row[2], row[3]);
         }
 

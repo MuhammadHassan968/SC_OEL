@@ -6,73 +6,85 @@ import com.inventory.service.InventoryManager;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.geom.RoundRectangle2D;
+import java.io.File;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Graphical User Interface (GUI) for the Inventory Management System using Java Swing.
- * <p>
- * Provides interactive features:
- * <ul>
- *   <li>Product entry form with live input validation.</li>
- *   <li>Dynamic table displaying items with color-coded stock status badges.</li>
- *   <li>Add, View, Update, and Delete operations.</li>
- *   <li>Search by item name or ID and filtering by stock status.</li>
- *   <li>Real-time dashboard metrics (Total Items, Total Units, Low Stock, Out of Stock).</li>
- * </ul>
+ * Modern Light SaaS Graphical User Interface (GUI) for the Inventory Management System using Java Swing.
+ * Supports:
+ * - 5 KPI Cards (including Total Net Worth)
+ * - Category / Tag management and filtering
+ * - Item unit pricing and total value calculations
+ * - 1-Click CSV Inventory Report Export
  *
  * @author Muhammad Hassan
- * @version 1.0
+ * @version 2.1
  */
 public class InventoryGUI extends JFrame {
 
     private static final long serialVersionUID = 1L;
 
-    /** Service controller for managing inventory repository. */
+    /** Primary color palette constants */
+    private static final Color CANVAS_BG = new Color(0xF1, 0xF5, 0xF9);       // #F1F5F9
+    private static final Color CARD_BG = Color.WHITE;
+    private static final Color BORDER_COLOR = new Color(0xE2, 0xE8, 0xF0);    // #E2E8F0
+    private static final Color TEXT_PRIMARY = new Color(0x0F, 0x17, 0x2A);    // #0F172A
+    private static final Color TEXT_MUTED = new Color(0x64, 0x74, 0x8B);      // #64748B
+    private static final Color FOCUS_COLOR = new Color(0x3B, 0x82, 0xF6);     // #3B82F6
+    private static final Color SELECTION_BG = new Color(0xEF, 0xF6, 0xFF);    // #EFF6FF
+    private static final Color DIVIDER_COLOR = new Color(0xF1, 0xF5, 0xF9);   // #F1F5F9
+
+    private static final Color COLOR_TOTAL_ITEMS = new Color(0x3B, 0x82, 0xF6); // #3B82F6 Blue
+    private static final Color COLOR_TOTAL_UNITS = new Color(0x10, 0xB9, 0x81); // #10B981 Green
+    private static final Color COLOR_NET_WORTH   = new Color(0x8B, 0x5C, 0xF6); // #8B5CF6 Purple
+    private static final Color COLOR_LOW_STOCK   = new Color(0xF5, 0x9E, 0x0B); // #F59E0B Amber
+    private static final Color COLOR_OUT_STOCK   = new Color(0xEF, 0x44, 0x44); // #EF4444 Red
+
+    private static final String[] CATEGORY_OPTIONS = {
+            "Electronics", "Accessories", "Office Supplies", "Groceries", "Hardware", "General"
+    };
+
     private final InventoryManager manager;
 
-    /** Text input field for Item ID. */
+    // Form inputs
     private JTextField txtId;
-    /** Text input field for Item Name. */
     private JTextField txtName;
-    /** Text input field for Quantity. */
+    private JComboBox<String> comboCategory;
+    private JTextField txtPrice;
     private JTextField txtQuantity;
-    /** Selection dropdown for Stock Status override. */
     private JComboBox<String> comboStatus;
-    /** Text field for real-time search queries. */
-    private JTextField txtSearch;
-    /** Dropdown for status-based filtering. */
-    private JComboBox<String> comboFilter;
 
-    /** Metric label for Total Items. */
+    // Search and Filters
+    private JTextField txtSearch;
+    private JComboBox<String> comboCategoryFilter;
+    private JComboBox<String> comboStatusFilter;
+
+    // Dashboard Metric Labels
     private JLabel lblTotalItems;
-    /** Metric label for Total Quantity Units. */
     private JLabel lblTotalUnits;
-    /** Metric label for Low Stock count. */
+    private JLabel lblNetWorth;
     private JLabel lblLowStock;
-    /** Metric label for Out of Stock count. */
     private JLabel lblOutOfStock;
 
-    /** Main inventory display table. */
+    // Table
     private JTable itemTable;
-    /** Table data model. */
     private DefaultTableModel tableModel;
 
-    /** Currently selected item ID in the UI. */
     private int selectedItemId = -1;
 
-    /**
-     * Constructs and initializes the {@code InventoryGUI} window.
-     *
-     * @param manager The {@link InventoryManager} service instance.
-     */
     public InventoryGUI(InventoryManager manager) {
         this.manager = manager;
         initUI();
@@ -81,258 +93,282 @@ public class InventoryGUI extends JFrame {
         updateDashboard();
     }
 
-    /**
-     * Sets up the window layout, themes, fonts, and sub-panels.
-     */
     private void initUI() {
-        setTitle("Store Inventory Management System - OEL Software Construction");
+        setTitle("Store Inventory Management System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1080, 720);
-        setMinimumSize(new Dimension(850, 600));
+        setSize(1200, 780);
+        setMinimumSize(new Dimension(980, 680));
         setLocationRelativeTo(null);
 
-        // Main content container with border layout
-        JPanel mainPanel = new JPanel(new BorderLayout(12, 12));
-        mainPanel.setBorder(new EmptyBorder(14, 14, 14, 14));
-        mainPanel.setBackground(new Color(245, 247, 250));
+        JPanel mainPanel = new JPanel(new BorderLayout(14, 14));
+        mainPanel.setBorder(new EmptyBorder(16, 16, 16, 16));
+        mainPanel.setBackground(CANVAS_BG);
 
-        // 1. Header Banner
+        // Header Panel with title and 5 clickable KPI metric cards
         mainPanel.add(createHeaderPanel(), BorderLayout.NORTH);
 
-        // 2. Center Content Split: Form on Left/Top, Table on Center
-        JPanel contentPanel = new JPanel(new BorderLayout(12, 12));
+        // Split: Form on Left, Table on Center
+        JPanel contentPanel = new JPanel(new BorderLayout(14, 14));
         contentPanel.setOpaque(false);
-
-        // Left sidebar: Form & Actions
         contentPanel.add(createFormPanel(), BorderLayout.WEST);
-
-        // Center: Search, Filters, and Table
         contentPanel.add(createTablePanel(), BorderLayout.CENTER);
 
         mainPanel.add(contentPanel, BorderLayout.CENTER);
-
-        // 3. Status Bar at Bottom
         mainPanel.add(createStatusBar(), BorderLayout.SOUTH);
 
         setContentPane(mainPanel);
     }
 
-    /**
-     * Builds the top banner and quick dashboard statistics cards.
-     *
-     * @return Formatted header {@link JPanel}.
-     */
     private JPanel createHeaderPanel() {
-        JPanel headerPanel = new JPanel(new BorderLayout(10, 10));
-        headerPanel.setOpaque(false);
+        JPanel headerCard = new RoundedPanel(12, CARD_BG, BORDER_COLOR);
+        headerCard.setLayout(new BorderLayout(14, 14));
+        headerCard.setBorder(new EmptyBorder(14, 16, 14, 16));
 
         // Title and subtitle
         JPanel titlePanel = new JPanel(new GridLayout(2, 1, 2, 2));
         titlePanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("🏪 Store Inventory Management System");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        titleLabel.setForeground(new Color(30, 41, 59));
+        JLabel titleLabel = new JLabel("Store Inventory Management System");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setForeground(TEXT_PRIMARY);
 
-        JLabel subLabel = new JLabel("Manage products, track stock status levels, and maintain store records");
-        subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        subLabel.setForeground(new Color(100, 116, 139));
+        JLabel subLabel = new JLabel("Real-time stock tracking, valuation analytics, and store operations");
+        subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subLabel.setForeground(TEXT_MUTED);
 
         titlePanel.add(titleLabel);
         titlePanel.add(subLabel);
-        headerPanel.add(titlePanel, BorderLayout.WEST);
+        headerCard.add(titlePanel, BorderLayout.WEST);
 
-        // Dashboard Metrics Cards
-        JPanel metricsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        metricsPanel.setOpaque(false);
+        // 5 KPI Cards in a FlowLayout
+        JPanel kpiContainer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        kpiContainer.setOpaque(false);
 
-        lblTotalItems = createMetricCard("Total Items", "0", new Color(59, 130, 246));
-        lblTotalUnits = createMetricCard("Total Units", "0", new Color(16, 185, 129));
-        lblLowStock = createMetricCard("Low Stock", "0", new Color(245, 158, 11));
-        lblOutOfStock = createMetricCard("Out of Stock", "0", new Color(239, 68, 68));
+        RoundedPanel cardTotalItems = createClickableKpiCard("Total Items", "0", COLOR_TOTAL_ITEMS, "ALL_STATUS", null);
+        RoundedPanel cardTotalUnits = createClickableKpiCard("Total Units", "0", COLOR_TOTAL_UNITS, "ALL_STATUS", null);
+        RoundedPanel cardNetWorth   = createClickableKpiCard("Net Worth", "$0.00", COLOR_NET_WORTH, "ALL_STATUS", null);
+        RoundedPanel cardLowStock   = createClickableKpiCard("Low Stock", "0", COLOR_LOW_STOCK, "Low Stock", null);
+        RoundedPanel cardOutOfStock = createClickableKpiCard("Out of Stock", "0", COLOR_OUT_STOCK, "Out of Stock", null);
 
-        metricsPanel.add(lblTotalItems.getParent());
-        metricsPanel.add(lblTotalUnits.getParent());
-        metricsPanel.add(lblLowStock.getParent());
-        metricsPanel.add(lblOutOfStock.getParent());
+        lblTotalItems = (JLabel) cardTotalItems.getClientProperty("valueLabel");
+        lblTotalUnits = (JLabel) cardTotalUnits.getClientProperty("valueLabel");
+        lblNetWorth   = (JLabel) cardNetWorth.getClientProperty("valueLabel");
+        lblLowStock   = (JLabel) cardLowStock.getClientProperty("valueLabel");
+        lblOutOfStock = (JLabel) cardOutOfStock.getClientProperty("valueLabel");
 
-        headerPanel.add(metricsPanel, BorderLayout.EAST);
-        return headerPanel;
+        kpiContainer.add(cardTotalItems);
+        kpiContainer.add(cardTotalUnits);
+        kpiContainer.add(cardNetWorth);
+        kpiContainer.add(cardLowStock);
+        kpiContainer.add(cardOutOfStock);
+
+        headerCard.add(kpiContainer, BorderLayout.EAST);
+        return headerCard;
     }
 
-    /**
-     * Helper to create a styled dashboard metric card.
-     *
-     * @param title Title label for the card.
-     * @param value Initial string value.
-     * @param accent Accent border/text color.
-     * @return The value {@link JLabel} to allow dynamic updates.
-     */
-    private JLabel createMetricCard(String title, String value, Color accent) {
-        JPanel card = new JPanel(new GridLayout(2, 1, 2, 2));
-        card.setBackground(Color.WHITE);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(8, 14, 8, 14)
-        ));
+    private RoundedPanel createClickableKpiCard(String title, String value, Color accentColor, String targetStatus, String targetCat) {
+        RoundedPanel card = new RoundedPanel(12, CARD_BG, BORDER_COLOR, accentColor, 4);
+        card.setLayout(new GridLayout(2, 1, 2, 2));
+        card.setBorder(new EmptyBorder(8, 14, 8, 14));
+        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        card.setToolTipText("Click to filter table");
 
         JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        titleLbl.setForeground(new Color(100, 116, 139));
+        titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        titleLbl.setForeground(TEXT_MUTED);
 
         JLabel valLbl = new JLabel(value);
-        valLbl.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        valLbl.setForeground(accent);
+        valLbl.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        valLbl.setForeground(accentColor);
 
         card.add(titleLbl);
         card.add(valLbl);
-        return valLbl;
+        card.putClientProperty("valueLabel", valLbl);
+
+        card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (targetStatus != null && comboStatusFilter != null) {
+                    if ("ALL_STATUS".equals(targetStatus)) {
+                        comboStatusFilter.setSelectedIndex(0);
+                    } else {
+                        comboStatusFilter.setSelectedItem(targetStatus);
+                    }
+                    applySearchAndFilter();
+                }
+            }
+        });
+
+        return card;
     }
 
-    /**
-     * Builds the item management form panel with fields and action buttons.
-     *
-     * @return Formatted form {@link JPanel}.
-     */
     private JPanel createFormPanel() {
-        JPanel formContainer = new JPanel(new BorderLayout(8, 8));
-        formContainer.setPreferredSize(new Dimension(320, 0));
-        formContainer.setBackground(Color.WHITE);
-        formContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(16, 16, 16, 16)
-        ));
+        RoundedPanel formContainer = new RoundedPanel(12, CARD_BG, BORDER_COLOR);
+        formContainer.setLayout(new BorderLayout(10, 10));
+        formContainer.setPreferredSize(new Dimension(330, 0));
+        formContainer.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        // Form Fields Area
         JPanel fieldsPanel = new JPanel();
         fieldsPanel.setLayout(new BoxLayout(fieldsPanel, BoxLayout.Y_AXIS));
         fieldsPanel.setOpaque(false);
 
         JLabel formHeading = new JLabel("Product Details");
-        formHeading.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        formHeading.setForeground(new Color(30, 41, 59));
+        formHeading.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        formHeading.setForeground(TEXT_PRIMARY);
         formHeading.setAlignmentX(Component.LEFT_ALIGNMENT);
         fieldsPanel.add(formHeading);
         fieldsPanel.add(Box.createVerticalStrut(12));
 
-        // ID (Read-only/auto-assigned)
-        fieldsPanel.add(createFieldLabel("Item ID (Auto-Generated / Read-Only):"));
-        txtId = new JTextField();
+        // ID (Read-only)
+        fieldsPanel.add(createFieldLabel("Item ID (Auto-Generated):"));
+        txtId = createStyledTextField();
         txtId.setEditable(false);
-        txtId.setBackground(new Color(241, 245, 249));
-        txtId.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        txtId.setBackground(new Color(0xF8, 0xFA, 0xFC));
+        txtId.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         txtId.setAlignmentX(Component.LEFT_ALIGNMENT);
         fieldsPanel.add(txtId);
-        fieldsPanel.add(Box.createVerticalStrut(10));
+        fieldsPanel.add(Box.createVerticalStrut(8));
 
         // Name
         fieldsPanel.add(createFieldLabel("Item Name: *"));
-        txtName = new JTextField();
-        txtName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        txtName = createStyledTextField();
+        txtName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         txtName.setAlignmentX(Component.LEFT_ALIGNMENT);
         fieldsPanel.add(txtName);
-        fieldsPanel.add(Box.createVerticalStrut(10));
+        fieldsPanel.add(Box.createVerticalStrut(8));
+
+        // Category / Tag
+        fieldsPanel.add(createFieldLabel("Category / Department: *"));
+        comboCategory = new JComboBox<>(CATEGORY_OPTIONS);
+        comboCategory.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        comboCategory.setBackground(Color.WHITE);
+        comboCategory.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        comboCategory.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fieldsPanel.add(comboCategory);
+        fieldsPanel.add(Box.createVerticalStrut(8));
+
+        // Unit Price ($)
+        fieldsPanel.add(createFieldLabel("Unit Price ($): * (e.g. 19.99)"));
+        txtPrice = createStyledTextField();
+        txtPrice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        txtPrice.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fieldsPanel.add(txtPrice);
+        fieldsPanel.add(Box.createVerticalStrut(8));
 
         // Quantity
         fieldsPanel.add(createFieldLabel("Quantity: * (0 or greater)"));
-        txtQuantity = new JTextField();
-        txtQuantity.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        txtQuantity = createStyledTextField();
+        txtQuantity.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         txtQuantity.setAlignmentX(Component.LEFT_ALIGNMENT);
         fieldsPanel.add(txtQuantity);
-        fieldsPanel.add(Box.createVerticalStrut(10));
+        fieldsPanel.add(Box.createVerticalStrut(8));
 
         // Status Override / Auto
-        fieldsPanel.add(createFieldLabel("Stock Status (Auto / Override):"));
+        fieldsPanel.add(createFieldLabel("Stock Status:"));
         comboStatus = new JComboBox<>(new String[]{"Auto (Calculated from Quantity)", "In Stock", "Low Stock", "Out of Stock"});
-        comboStatus.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        comboStatus.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        comboStatus.setBackground(Color.WHITE);
+        comboStatus.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         comboStatus.setAlignmentX(Component.LEFT_ALIGNMENT);
         fieldsPanel.add(comboStatus);
-        fieldsPanel.add(Box.createVerticalStrut(14));
+        fieldsPanel.add(Box.createVerticalStrut(10));
 
-        // Status Legend helper note
-        JLabel noteLabel = new JLabel("<html><small style='color:#64748b;'>"
-                + "<b>Status Rules:</b><br>"
-                + "• Quantity = 0 &rarr; <font color='#dc3545'>Out of Stock</font><br>"
-                + "• Quantity 1 - 5 &rarr; <font color='#d97706'>Low Stock</font><br>"
-                + "• Quantity &gt; 5 &rarr; <font color='#16a34a'>In Stock</font>"
+        JLabel noteLabel = new JLabel("<html><small style='color:#64748b; font-family: Segoe UI;'>"
+                + "<b>Classification:</b><br>"
+                + "&bull; Qty = 0 &rarr; <font color='#991B1B'>Out of Stock</font><br>"
+                + "&bull; Qty 1 - 5 &rarr; <font color='#92400E'>Low Stock</font><br>"
+                + "&bull; Qty &gt; 5 &rarr; <font color='#166534'>In Stock</font>"
                 + "</small></html>");
         noteLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         fieldsPanel.add(noteLabel);
 
         formContainer.add(fieldsPanel, BorderLayout.CENTER);
 
-        // Buttons Area
-        JPanel buttonsPanel = new JPanel(new GridLayout(4, 1, 8, 8));
-        buttonsPanel.setOpaque(false);
-        buttonsPanel.setBorder(new EmptyBorder(12, 0, 0, 0));
+        // Buttons in 2x2 grid with exact solid colors and high-contrast visible text
+        JPanel buttonsGrid = new JPanel(new GridLayout(2, 2, 8, 8));
+        buttonsGrid.setOpaque(false);
+        buttonsGrid.setBorder(new EmptyBorder(10, 0, 0, 0));
 
-        JButton btnAdd = createStyledButton("➕ Add Item", new Color(16, 185, 129), Color.WHITE);
-        JButton btnUpdate = createStyledButton("✏️ Update Selected", new Color(59, 130, 246), Color.WHITE);
-        JButton btnDelete = createStyledButton("🗑️ Delete Selected", new Color(239, 68, 68), Color.WHITE);
-        JButton btnClear = createStyledButton("🧹 Clear Form", new Color(148, 163, 184), Color.WHITE);
+        RoundedButton btnAdd = new RoundedButton("Add Item", new Color(0x16, 0xA3, 0x4A), Color.WHITE, 8);
+        RoundedButton btnUpdate = new RoundedButton("Update Item", new Color(0x25, 0x63, 0xEB), Color.WHITE, 8);
+        RoundedButton btnDelete = new RoundedButton("Delete Item", new Color(0xDC, 0x26, 0x26), Color.WHITE, 8);
+        RoundedButton btnClear = new RoundedButton("Clear Form", new Color(0xE2, 0xE8, 0xF0), new Color(0x0F, 0x17, 0x2A), 8);
 
         btnAdd.addActionListener(e -> handleAddItem());
         btnUpdate.addActionListener(e -> handleUpdateItem());
         btnDelete.addActionListener(e -> handleDeleteItem());
         btnClear.addActionListener(e -> clearForm());
 
-        buttonsPanel.add(btnAdd);
-        buttonsPanel.add(btnUpdate);
-        buttonsPanel.add(btnDelete);
-        buttonsPanel.add(btnClear);
+        buttonsGrid.add(btnAdd);
+        buttonsGrid.add(btnUpdate);
+        buttonsGrid.add(btnDelete);
+        buttonsGrid.add(btnClear);
 
-        formContainer.add(buttonsPanel, BorderLayout.SOUTH);
+        formContainer.add(buttonsGrid, BorderLayout.SOUTH);
         return formContainer;
     }
 
-    /**
-     * Builds the right-hand panel containing search, filtering, and the inventory table.
-     *
-     * @return Formatted table container {@link JPanel}.
-     */
     private JPanel createTablePanel() {
-        JPanel tableContainer = new JPanel(new BorderLayout(8, 8));
-        tableContainer.setBackground(Color.WHITE);
-        tableContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(14, 14, 14, 14)
-        ));
+        RoundedPanel tableContainer = new RoundedPanel(12, CARD_BG, BORDER_COLOR);
+        tableContainer.setLayout(new BorderLayout(12, 12));
+        tableContainer.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        // Top Toolbar: Search & Filter
+        // Toolbar: Search, Category Filter, Status Filter, Export CSV, and View All
         JPanel toolbar = new JPanel(new BorderLayout(8, 8));
         toolbar.setOpaque(false);
 
         // Search Box
         JPanel searchBox = new JPanel(new BorderLayout(6, 6));
         searchBox.setOpaque(false);
-        JLabel lblSearchIcon = new JLabel("🔍 Search:");
-        lblSearchIcon.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        txtSearch = new JTextField();
-        txtSearch.setToolTipText("Type item name or ID to filter in real-time...");
+        JLabel lblSearch = new JLabel("Search:");
+        lblSearch.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblSearch.setForeground(TEXT_PRIMARY);
+
+        txtSearch = createStyledTextField();
+        txtSearch.setToolTipText("Filter by name, ID, or category...");
         txtSearch.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
                 applySearchAndFilter();
             }
         });
-        searchBox.add(lblSearchIcon, BorderLayout.WEST);
+        searchBox.add(lblSearch, BorderLayout.WEST);
         searchBox.add(txtSearch, BorderLayout.CENTER);
         toolbar.add(searchBox, BorderLayout.CENTER);
 
-        // Filter Dropdown & Refresh
-        JPanel filterBox = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        filterBox.setOpaque(false);
-        JLabel lblFilter = new JLabel("Filter:");
-        lblFilter.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        // Right Toolbar Filters & Actions
+        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        actionsPanel.setOpaque(false);
 
-        comboFilter = new JComboBox<>(new String[]{"All Items", "In Stock", "Low Stock", "Out of Stock"});
-        comboFilter.addActionListener(e -> applySearchAndFilter());
+        // Category Filter
+        JLabel lblCatFilter = new JLabel("Category:");
+        lblCatFilter.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblCatFilter.setForeground(TEXT_PRIMARY);
 
-        JButton btnRefresh = new JButton("🔄 View All");
-        btnRefresh.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        String[] catFilterItems = new String[CATEGORY_OPTIONS.length + 1];
+        catFilterItems[0] = "All Categories";
+        System.arraycopy(CATEGORY_OPTIONS, 0, catFilterItems, 1, CATEGORY_OPTIONS.length);
+        comboCategoryFilter = new JComboBox<>(catFilterItems);
+        comboCategoryFilter.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        comboCategoryFilter.setBackground(Color.WHITE);
+        comboCategoryFilter.addActionListener(e -> applySearchAndFilter());
+
+        // Status Filter
+        JLabel lblStatFilter = new JLabel("Status:");
+        lblStatFilter.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblStatFilter.setForeground(TEXT_PRIMARY);
+
+        comboStatusFilter = new JComboBox<>(new String[]{"All Statuses", "In Stock", "Low Stock", "Out of Stock"});
+        comboStatusFilter.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        comboStatusFilter.setBackground(Color.WHITE);
+        comboStatusFilter.addActionListener(e -> applySearchAndFilter());
+
+        // View All Button
+        RoundedButton btnRefresh = new RoundedButton("View All", new Color(0xF1, 0xF5, 0xF9), TEXT_PRIMARY, 6);
         btnRefresh.addActionListener(e -> {
             txtSearch.setText("");
-            comboFilter.setSelectedIndex(0);
+            comboCategoryFilter.setSelectedIndex(0);
+            comboStatusFilter.setSelectedIndex(0);
             refreshTable();
             if (manager.isEmpty()) {
                 JOptionPane.showMessageDialog(this,
@@ -341,48 +377,86 @@ public class InventoryGUI extends JFrame {
             }
         });
 
-        filterBox.add(lblFilter);
-        filterBox.add(comboFilter);
-        filterBox.add(btnRefresh);
-        toolbar.add(filterBox, BorderLayout.EAST);
+        // 1-Click Export CSV Button
+        RoundedButton btnExport = new RoundedButton("Export CSV", new Color(0x05, 0x96, 0x69), Color.WHITE, 6);
+        btnExport.setToolTipText("Export inventory report as CSV for Excel / printing");
+        btnExport.addActionListener(e -> handleExportCSV());
 
+        actionsPanel.add(lblCatFilter);
+        actionsPanel.add(comboCategoryFilter);
+        actionsPanel.add(lblStatFilter);
+        actionsPanel.add(comboStatusFilter);
+        actionsPanel.add(btnRefresh);
+        actionsPanel.add(btnExport);
+
+        toolbar.add(actionsPanel, BorderLayout.EAST);
         tableContainer.add(toolbar, BorderLayout.NORTH);
 
-        // JTable Configuration
-        String[] columnNames = {"ID", "Item Name", "Quantity", "Stock Status", "Last Modified"};
+        // JTable Configuration with 8 columns (ID, Name, Category, Price, Qty, Total, Status, Modified)
+        String[] columnNames = {"ID", "Item Name", "Category", "Unit Price", "Quantity", "Total Value", "Stock Status", "Last Modified"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             private static final long serialVersionUID = 1L;
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // Table cells are read-only; use form to edit
+                return false;
             }
         };
 
         itemTable = new JTable(tableModel);
-        itemTable.setRowHeight(28);
+        itemTable.setRowHeight(42);
         itemTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        itemTable.setForeground(TEXT_PRIMARY);
+        itemTable.setBackground(Color.WHITE);
         itemTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        itemTable.setGridColor(new Color(241, 245, 249));
 
-        // Header Styling
+        // Horizontal dividers only (#F1F5F9)
+        itemTable.setShowGrid(false);
+        itemTable.setShowHorizontalLines(true);
+        itemTable.setShowVerticalLines(false);
+        itemTable.setGridColor(DIVIDER_COLOR);
+
+        // Soft blue row selection (#EFF6FF with #0F172A text)
+        itemTable.setSelectionBackground(SELECTION_BG);
+        itemTable.setSelectionForeground(TEXT_PRIMARY);
+
+        // Header Styling: #F8FAFC bold header
         JTableHeader header = itemTable.getTableHeader();
-        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        header.setBackground(new Color(248, 250, 252));
-        header.setForeground(new Color(51, 65, 85));
-        header.setPreferredSize(new Dimension(header.getWidth(), 32));
+        header.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        header.setBackground(new Color(0xF8, 0xFA, 0xFC));
+        header.setForeground(TEXT_PRIMARY);
+        header.setPreferredSize(new Dimension(header.getWidth(), 38));
+        header.setReorderingAllowed(false);
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
 
-        // Center align ID and Quantity columns
+        // Column renderers
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        itemTable.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
-        itemTable.getColumnModel().getColumn(0).setMaxWidth(80);
-        itemTable.getColumnModel().getColumn(2).setCellRenderer(centerRenderer);
-        itemTable.getColumnModel().getColumn(2).setMaxWidth(100);
+        centerRenderer.setFont(new Font("Segoe UI", Font.PLAIN, 13));
 
-        // Custom Cell Renderer for Stock Status Badges
-        itemTable.getColumnModel().getColumn(3).setCellRenderer(new StatusBadgeRenderer());
+        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
+        rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
+        rightRenderer.setFont(new Font("Segoe UI", Font.PLAIN, 13));
 
-        // Row Selection Listener: Populate form when row is selected
+        DefaultTableCellRenderer leftRenderer = new DefaultTableCellRenderer();
+        leftRenderer.setHorizontalAlignment(SwingConstants.LEFT);
+        leftRenderer.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        itemTable.getColumnModel().getColumn(0).setCellRenderer(centerRenderer); // ID
+        itemTable.getColumnModel().getColumn(0).setMaxWidth(70);
+        itemTable.getColumnModel().getColumn(1).setCellRenderer(leftRenderer);   // Name
+        itemTable.getColumnModel().getColumn(2).setCellRenderer(centerRenderer); // Category
+        itemTable.getColumnModel().getColumn(2).setPreferredWidth(100);
+        itemTable.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);  // Unit Price
+        itemTable.getColumnModel().getColumn(3).setPreferredWidth(90);
+        itemTable.getColumnModel().getColumn(4).setCellRenderer(centerRenderer); // Quantity
+        itemTable.getColumnModel().getColumn(4).setMaxWidth(80);
+        itemTable.getColumnModel().getColumn(5).setCellRenderer(rightRenderer);  // Total Value
+        itemTable.getColumnModel().getColumn(5).setPreferredWidth(95);
+        itemTable.getColumnModel().getColumn(6).setCellRenderer(new StatusBadgeRenderer()); // Status
+        itemTable.getColumnModel().getColumn(6).setPreferredWidth(120);
+        itemTable.getColumnModel().getColumn(7).setCellRenderer(centerRenderer); // Last Modified
+
+        // Row Selection Listener
         itemTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 int selectedRow = itemTable.getSelectedRow();
@@ -393,136 +467,145 @@ public class InventoryGUI extends JFrame {
         });
 
         JScrollPane scrollPane = new JScrollPane(itemTable);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240), 1));
-        tableContainer.add(scrollPane, BorderLayout.CENTER);
+        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+        scrollPane.setBackground(Color.WHITE);
+        scrollPane.getViewport().setBackground(Color.WHITE); // Eliminate gray background
 
+        tableContainer.add(scrollPane, BorderLayout.CENTER);
         return tableContainer;
     }
 
-    /**
-     * Builds the bottom status bar displaying application mode and tips.
-     *
-     * @return Status bar {@link JPanel}.
-     */
     private JPanel createStatusBar() {
         JPanel statusBar = new JPanel(new BorderLayout());
         statusBar.setOpaque(false);
         statusBar.setBorder(new EmptyBorder(4, 4, 4, 4));
 
-        JLabel lblStatus = new JLabel("Ready | Select any row in the table to edit or delete.");
-        lblStatus.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblStatus.setForeground(new Color(100, 116, 139));
+        JLabel lblStatus = new JLabel("Ready | Select any row to edit or delete. Click KPI cards to filter.");
+        lblStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblStatus.setForeground(TEXT_MUTED);
 
-        JLabel lblVersion = new JLabel("Java Swing • JDK 21 • Modern Software Construction");
-        lblVersion.setFont(new Font("Segoe UI", Font.ITALIC, 11));
-        lblVersion.setForeground(new Color(148, 163, 184));
+        JLabel lblVersion = new JLabel("Java 21 Swing • Full SaaS Suite with CSV Export & Valuation");
+        lblVersion.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblVersion.setForeground(TEXT_MUTED);
 
         statusBar.add(lblStatus, BorderLayout.WEST);
         statusBar.add(lblVersion, BorderLayout.EAST);
         return statusBar;
     }
 
-    /**
-     * Creates a styled form label.
-     */
     private JLabel createFieldLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        label.setForeground(new Color(51, 65, 85));
+        label.setForeground(TEXT_PRIMARY);
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         return label;
     }
 
-    /**
-     * Helper to create custom styled buttons.
-     */
-    private JButton createStyledButton(String text, Color bg, Color fg) {
-        JButton btn = new JButton(text);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btn.setBackground(bg);
-        btn.setForeground(fg);
-        btn.setFocusPainted(false);
-        btn.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
+    private JTextField createStyledTextField() {
+        JTextField field = new JTextField();
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        field.setForeground(TEXT_PRIMARY);
+        field.setBackground(Color.WHITE);
+        field.setCaretColor(TEXT_PRIMARY);
+
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                new EmptyBorder(6, 8, 6, 8)
+        ));
+
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (field.isEditable()) {
+                    field.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(FOCUS_COLOR, 1, true),
+                            new EmptyBorder(6, 8, 6, 8)
+                    ));
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                        new EmptyBorder(6, 8, 6, 8)
+                ));
+            }
+        });
+
+        return field;
     }
 
-    /**
-     * Populates initial sample items to showcase inventory tracking on startup.
-     */
     private void populateSampleData() {
-        manager.addItem("Logitech MX Master 3S", 12);
-        manager.addItem("Mechanical Keyboard TKL", 4);
-        manager.addItem("USB-C Fast Charging Cable", 28);
-        manager.addItem("Dell UltraSharp 27\" Monitor", 2);
-        manager.addItem("Ergonomic Desk Chair Pad", 0);
+        manager.addItem(new InventoryItem(0, "Logitech MX Master 3S", "Accessories", 99.99, 12));
+        manager.addItem(new InventoryItem(0, "Mechanical Keyboard TKL", "Accessories", 79.50, 4));
+        manager.addItem(new InventoryItem(0, "USB-C Fast Charging Cable", "Electronics", 14.99, 28));
+        manager.addItem(new InventoryItem(0, "Dell UltraSharp 27\" Monitor", "Electronics", 349.00, 2));
+        manager.addItem(new InventoryItem(0, "Ergonomic Desk Chair Pad", "Office Supplies", 35.00, 0));
     }
 
-    /**
-     * Refreshes the table view with all items from the manager.
-     */
     public void refreshTable() {
         renderItems(manager.getAllItems());
     }
 
-    /**
-     * Renders a specific list of items into the table model.
-     *
-     * @param items List of inventory items to display.
-     */
     private void renderItems(List<InventoryItem> items) {
         tableModel.setRowCount(0);
         for (InventoryItem item : items) {
             tableModel.addRow(new Object[]{
                     item.getId(),
                     item.getName(),
+                    item.getCategory(),
+                    String.format("$%.2f", item.getUnitPrice()),
                     item.getQuantity(),
+                    String.format("$%.2f", item.getTotalValue()),
                     item.getStatus(),
                     item.getLastUpdated()
             });
         }
     }
 
-    /**
-     * Updates top dashboard metrics.
-     */
     public void updateDashboard() {
         lblTotalItems.setText(String.valueOf(manager.getItemCount()));
         lblTotalUnits.setText(String.valueOf(manager.getTotalUnits()));
+        lblNetWorth.setText(String.format("$%,.2f", manager.getTotalInventoryValue()));
         lblLowStock.setText(String.valueOf(manager.getLowStockCount()));
         lblOutOfStock.setText(String.valueOf(manager.getOutOfStockCount()));
     }
 
-    /**
-     * Applies search and status filtering based on input controls.
-     */
     private void applySearchAndFilter() {
         String query = txtSearch.getText().trim();
-        String selectedFilter = (String) comboFilter.getSelectedItem();
+        String selectedCat = (String) comboCategoryFilter.getSelectedItem();
+        String selectedStatus = (String) comboStatusFilter.getSelectedItem();
 
         List<InventoryItem> filtered = manager.searchByName(query);
 
-        if (selectedFilter != null && !selectedFilter.equals("All Items")) {
-            StockStatus statusFilter = null;
-            if (selectedFilter.equals("In Stock")) statusFilter = StockStatus.IN_STOCK;
-            else if (selectedFilter.equals("Low Stock")) statusFilter = StockStatus.LOW_STOCK;
-            else if (selectedFilter.equals("Out of Stock")) statusFilter = StockStatus.OUT_OF_STOCK;
+        if (selectedCat != null && !selectedCat.equals("All Categories")) {
+            filtered = filtered.stream()
+                    .filter(i -> i.getCategory().equalsIgnoreCase(selectedCat))
+                    .toList();
+        }
 
-            final StockStatus target = statusFilter;
-            filtered = filtered.stream().filter(i -> i.getStatus() == target).toList();
+        if (selectedStatus != null && !selectedStatus.equals("All Statuses")) {
+            StockStatus target = null;
+            if (selectedStatus.equals("In Stock")) target = StockStatus.IN_STOCK;
+            else if (selectedStatus.equals("Low Stock")) target = StockStatus.LOW_STOCK;
+            else if (selectedStatus.equals("Out of Stock")) target = StockStatus.OUT_OF_STOCK;
+
+            if (target != null) {
+                final StockStatus fTarget = target;
+                filtered = filtered.stream().filter(i -> i.getStatus() == fTarget).toList();
+            }
         }
 
         renderItems(filtered);
     }
 
-    /**
-     * Handles adding a new item from form inputs with validation.
-     */
     private void handleAddItem() {
         String name = txtName.getText();
+        String category = (String) comboCategory.getSelectedItem();
+        String priceText = txtPrice.getText();
         String qtyText = txtQuantity.getText();
 
-        // 1. Validate empty name
         if (name == null || name.trim().isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "Validation Error: Item name cannot be empty.",
@@ -531,7 +614,25 @@ public class InventoryGUI extends JFrame {
             return;
         }
 
-        // 2. Validate quantity (must be numeric and non-negative)
+        double price;
+        try {
+            price = Double.parseDouble(priceText.trim().replace("$", ""));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                    "Validation Error: Unit price must be a valid number (e.g. 19.99).",
+                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
+            txtPrice.requestFocus();
+            return;
+        }
+
+        if (price < 0.0) {
+            JOptionPane.showMessageDialog(this,
+                    "Validation Error: Unit price cannot be negative.",
+                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
+            txtPrice.requestFocus();
+            return;
+        }
+
         int quantity;
         try {
             quantity = Integer.parseInt(qtyText.trim());
@@ -551,21 +652,14 @@ public class InventoryGUI extends JFrame {
             return;
         }
 
-        // 3. Check status override
         StockStatus status = null;
         int statusIndex = comboStatus.getSelectedIndex();
         if (statusIndex == 1) status = StockStatus.IN_STOCK;
         else if (statusIndex == 2) status = StockStatus.LOW_STOCK;
         else if (statusIndex == 3) status = StockStatus.OUT_OF_STOCK;
 
-        // 4. Perform addition
-        InventoryItem newItem;
-        if (status == null) {
-            newItem = manager.addItem(name.trim(), quantity);
-        } else {
-            newItem = new InventoryItem(0, name.trim(), quantity, status);
-            manager.addItem(newItem);
-        }
+        InventoryItem newItem = new InventoryItem(0, name.trim(), category, price, quantity, status);
+        manager.addItem(newItem);
 
         JOptionPane.showMessageDialog(this,
                 "Success! Item \"" + newItem.getName() + "\" added with ID #" + newItem.getId() + " (" + newItem.getStatus().getDisplayName() + ").",
@@ -576,9 +670,6 @@ public class InventoryGUI extends JFrame {
         updateDashboard();
     }
 
-    /**
-     * Handles updating an existing selected item.
-     */
     private void handleUpdateItem() {
         if (selectedItemId <= 0) {
             JOptionPane.showMessageDialog(this,
@@ -588,12 +679,31 @@ public class InventoryGUI extends JFrame {
         }
 
         String name = txtName.getText();
+        String category = (String) comboCategory.getSelectedItem();
+        String priceText = txtPrice.getText();
         String qtyText = txtQuantity.getText();
 
         if (name == null || name.trim().isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "Validation Error: Item name cannot be empty.",
                     "Input Validation Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        double price;
+        try {
+            price = Double.parseDouble(priceText.trim().replace("$", ""));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                    "Validation Error: Unit price must be a valid number.",
+                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (price < 0.0) {
+            JOptionPane.showMessageDialog(this,
+                    "Validation Error: Unit price cannot be negative.",
+                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -620,12 +730,7 @@ public class InventoryGUI extends JFrame {
         else if (statusIndex == 2) status = StockStatus.LOW_STOCK;
         else if (statusIndex == 3) status = StockStatus.OUT_OF_STOCK;
 
-        boolean updated;
-        if (status == null) {
-            updated = manager.updateItem(selectedItemId, name.trim(), quantity);
-        } else {
-            updated = manager.updateItem(selectedItemId, name.trim(), quantity, status);
-        }
+        boolean updated = manager.updateItem(selectedItemId, name.trim(), category, price, quantity, status);
 
         if (updated) {
             JOptionPane.showMessageDialog(this,
@@ -635,16 +740,12 @@ public class InventoryGUI extends JFrame {
             refreshTable();
             updateDashboard();
         } else {
-            // Handled gracefully as required
             JOptionPane.showMessageDialog(this,
                     "Item with ID #" + selectedItemId + " does not exist in the inventory.",
                     "Update Failed", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    /**
-     * Handles deleting the selected item.
-     */
     private void handleDeleteItem() {
         if (selectedItemId <= 0) {
             JOptionPane.showMessageDialog(this,
@@ -677,17 +778,51 @@ public class InventoryGUI extends JFrame {
         }
     }
 
-    /**
-     * Populates the input form from the selected table row.
-     */
+    private void handleExportCSV() {
+        if (manager.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot export an empty inventory. Please add items first.",
+                    "Export Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Export Inventory Report (CSV)");
+        fileChooser.setSelectedFile(new File("inventory_report.csv"));
+        fileChooser.setFileFilter(new FileNameExtensionFilter("CSV Comma-Separated Values (*.csv)", "csv"));
+
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            if (!fileToSave.getName().toLowerCase().endsWith(".csv")) {
+                fileToSave = new File(fileToSave.getParentFile(), fileToSave.getName() + ".csv");
+            }
+
+            try {
+                manager.exportToCSV(fileToSave);
+                JOptionPane.showMessageDialog(this,
+                        "Report exported successfully!\nLocation: " + fileToSave.getAbsolutePath(),
+                        "Export Complete", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Error exporting report: " + ex.getMessage(),
+                        "Export Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
     private void populateFormFromSelectedRow(int row) {
         selectedItemId = (int) tableModel.getValueAt(row, 0);
         String name = (String) tableModel.getValueAt(row, 1);
-        int quantity = (int) tableModel.getValueAt(row, 2);
-        StockStatus status = (StockStatus) tableModel.getValueAt(row, 3);
+        String category = (String) tableModel.getValueAt(row, 2);
+        String priceStr = ((String) tableModel.getValueAt(row, 3)).replace("$", "").trim();
+        int quantity = (int) tableModel.getValueAt(row, 4);
+        StockStatus status = (StockStatus) tableModel.getValueAt(row, 6);
 
         txtId.setText(String.valueOf(selectedItemId));
         txtName.setText(name);
+        comboCategory.setSelectedItem(category);
+        txtPrice.setText(priceStr);
         txtQuantity.setText(String.valueOf(quantity));
 
         if (status == StockStatus.IN_STOCK) {
@@ -699,56 +834,175 @@ public class InventoryGUI extends JFrame {
         }
     }
 
-    /**
-     * Clears all form fields and resets selection tracking.
-     */
     private void clearForm() {
         selectedItemId = -1;
         txtId.setText("");
         txtName.setText("");
+        comboCategory.setSelectedIndex(0);
+        txtPrice.setText("");
         txtQuantity.setText("");
         comboStatus.setSelectedIndex(0);
         itemTable.clearSelection();
     }
 
-    /**
-     * Custom cell renderer for displaying colored badges for StockStatus.
-     */
+    public static class RoundedPanel extends JPanel {
+        private static final long serialVersionUID = 1L;
+        private final int radius;
+        private final Color bgColor;
+        private final Color borderColor;
+        private final Color leftAccentColor;
+        private final int leftAccentWidth;
+
+        public RoundedPanel(int radius, Color bgColor, Color borderColor) {
+            this(radius, bgColor, borderColor, null, 0);
+        }
+
+        public RoundedPanel(int radius, Color bgColor, Color borderColor, Color leftAccentColor, int leftAccentWidth) {
+            this.radius = radius;
+            this.bgColor = bgColor;
+            this.borderColor = borderColor;
+            this.leftAccentColor = leftAccentColor;
+            this.leftAccentWidth = leftAccentWidth;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            g2.setColor(bgColor);
+            g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
+
+            if (leftAccentColor != null && leftAccentWidth > 0) {
+                Shape oldClip = g2.getClip();
+                g2.clip(new RoundRectangle2D.Float(0, 0, getWidth() - 1, getHeight() - 1, radius, radius));
+                g2.setColor(leftAccentColor);
+                g2.fillRect(0, 0, leftAccentWidth, getHeight());
+                g2.setClip(oldClip);
+            }
+
+            if (borderColor != null) {
+                g2.setColor(borderColor);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
+            }
+
+            g2.dispose();
+            super.paintComponent(g);
+        }
+    }
+
+    public static class RoundedButton extends JButton {
+        private static final long serialVersionUID = 1L;
+        private final Color normalBg;
+        private final Color hoverBg;
+        private final int radius;
+
+        public RoundedButton(String text, Color bg, Color fg, int radius) {
+            super(text);
+            this.normalBg = bg;
+            this.hoverBg = blend(bg, Color.BLACK, 0.12f);
+            this.radius = radius;
+            setFont(new Font("Segoe UI", Font.BOLD, 12));
+            setForeground(fg);
+            setContentAreaFilled(false);
+            setFocusPainted(false);
+            setBorderPainted(false);
+            setOpaque(false);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
+            setBorder(new EmptyBorder(8, 12, 8, 12));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(getModel().isRollover() ? hoverBg : normalBg);
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
+            g2.dispose();
+            super.paintComponent(g);
+        }
+
+        private static Color blend(Color c1, Color c2, float ratio) {
+            float r = c1.getRed() * (1 - ratio) + c2.getRed() * ratio;
+            float g = c1.getGreen() * (1 - ratio) + c2.getGreen() * ratio;
+            float b = c1.getBlue() * (1 - ratio) + c2.getBlue() * ratio;
+            return new Color((int) r, (int) g, (int) b);
+        }
+    }
+
     private static class StatusBadgeRenderer extends DefaultTableCellRenderer {
         private static final long serialVersionUID = 1L;
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value,
                                                        boolean isSelected, boolean hasFocus, int row, int column) {
-            JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-            label.setHorizontalAlignment(SwingConstants.CENTER);
-            label.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            return new PillBadgeComponent(value instanceof StockStatus ? (StockStatus) value : null,
+                    isSelected, table.getSelectionBackground());
+        }
 
-            if (value instanceof StockStatus) {
-                StockStatus status = (StockStatus) value;
-                label.setText("  " + status.getDisplayName() + "  ");
+        private static class PillBadgeComponent extends JComponent {
+            private static final long serialVersionUID = 1L;
+            private final StockStatus status;
+            private final boolean isSelected;
+            private final Color selectionBg;
 
-                if (!isSelected) {
+            PillBadgeComponent(StockStatus status, boolean isSelected, Color selectionBg) {
+                this.status = status;
+                this.isSelected = isSelected;
+                this.selectionBg = selectionBg;
+                setFont(new Font("Segoe UI", Font.BOLD, 12));
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                if (isSelected) {
+                    g2.setColor(selectionBg);
+                    g2.fillRect(0, 0, getWidth(), getHeight());
+                }
+
+                if (status != null) {
+                    Color pillBg;
+                    Color pillFg;
+
                     switch (status) {
                         case IN_STOCK:
-                            label.setForeground(new Color(22, 101, 52));
-                            label.setBackground(new Color(220, 252, 231));
+                            pillBg = new Color(0xDC, 0xFC, 0xE7); // #DCFCE7
+                            pillFg = new Color(0x16, 0x65, 0x34); // #166534
                             break;
                         case LOW_STOCK:
-                            label.setForeground(new Color(146, 64, 14));
-                            label.setBackground(new Color(254, 243, 199));
+                            pillBg = new Color(0xFE, 0xF3, 0xC7); // #FEF3C7
+                            pillFg = new Color(0x92, 0x40, 0x0E); // #92400E
                             break;
                         case OUT_OF_STOCK:
-                            label.setForeground(new Color(153, 27, 27));
-                            label.setBackground(new Color(254, 226, 226));
+                        default:
+                            pillBg = new Color(0xFE, 0xE2, 0xE2); // #FEE2E2
+                            pillFg = new Color(0x99, 0x1B, 0x1B); // #991B1B
                             break;
                     }
-                    label.setOpaque(true);
-                } else {
-                    label.setOpaque(true);
+
+                    String text = status.getDisplayName();
+                    FontMetrics fm = g2.getFontMetrics(getFont());
+                    int textW = fm.stringWidth(text);
+                    int textH = fm.getAscent();
+
+                    int pillW = textW + 24;
+                    int pillH = 26;
+                    int pillX = (getWidth() - pillW) / 2;
+                    int pillY = (getHeight() - pillH) / 2;
+
+                    g2.setColor(pillBg);
+                    g2.fillRoundRect(pillX, pillY, pillW, pillH, 14, 14);
+
+                    g2.setColor(pillFg);
+                    g2.setFont(getFont());
+                    g2.drawString(text, pillX + (pillW - textW) / 2, pillY + (pillH + textH) / 2 - 2);
                 }
+                g2.dispose();
             }
-            return label;
         }
     }
 }

@@ -3,6 +3,11 @@ package com.inventory.service;
 import com.inventory.model.InventoryItem;
 import com.inventory.model.StockStatus;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -16,15 +21,17 @@ import java.util.stream.Collectors;
  * <p>
  * Responsibilities include:
  * <ul>
- *   <li>Adding new inventory items with unique auto-incremented identifiers and validation.</li>
- *   <li>Retrieving all items or querying specific items by ID or name.</li>
+ *   <li>Adding new inventory items with unique auto-incremented identifiers, category, pricing, and validation.</li>
+ *   <li>Retrieving all items or querying specific items by ID, name, or category.</li>
  *   <li>Modifying existing items while handling non-existent updates gracefully.</li>
  *   <li>Removing items safely by ID.</li>
  *   <li>Monitoring stock level thresholds (In Stock, Low Stock, Out of Stock).</li>
+ *   <li>Calculating total inventory valuation (Net Worth).</li>
+ *   <li>Exporting inventory data to CSV reports.</li>
  * </ul>
  *
  * @author Muhammad Hassan
- * @version 1.0
+ * @version 2.0
  */
 public class InventoryManager {
 
@@ -39,23 +46,36 @@ public class InventoryManager {
      */
     public InventoryManager() {
         this.items = new ArrayList<>();
-        this.idCounter = new AtomicInteger(100); // Start IDs at 101 for realistic SKU-style IDs
+        this.idCounter = new AtomicInteger(100);
     }
 
     /**
-     * Adds a new item to the inventory after performing rigorous validation.
+     * Adds a new item to the inventory with default category and zero price.
      *
      * @param name     Name of the product. Cannot be empty or null.
      * @param quantity Initial quantity on hand. Must be non-negative.
      * @return The newly created {@link InventoryItem}.
-     * @throws IllegalArgumentException if the name is empty or quantity is negative.
      */
     public InventoryItem addItem(String name, int quantity) {
+        return addItem(name, "General", 0.0, quantity);
+    }
+
+    /**
+     * Adds a new item to the inventory with category and unit price.
+     *
+     * @param name      Name of the product. Cannot be empty or null.
+     * @param category  Category or department tag.
+     * @param unitPrice Unit price. Must be non-negative.
+     * @param quantity  Initial quantity on hand. Must be non-negative.
+     * @return The newly created {@link InventoryItem}.
+     */
+    public InventoryItem addItem(String name, String category, double unitPrice, int quantity) {
         InventoryItem.validateName(name);
+        InventoryItem.validatePrice(unitPrice);
         InventoryItem.validateQuantity(quantity);
 
         int newId = idCounter.incrementAndGet();
-        InventoryItem item = new InventoryItem(newId, name, quantity);
+        InventoryItem item = new InventoryItem(newId, name, category, unitPrice, quantity);
         items.add(item);
         return item;
     }
@@ -65,7 +85,6 @@ public class InventoryManager {
      *
      * @param item Item to insert. Must not be null.
      * @return The added {@link InventoryItem}.
-     * @throws IllegalArgumentException if item is null.
      */
     public InventoryItem addItem(InventoryItem item) {
         if (item == null) {
@@ -131,7 +150,9 @@ public class InventoryManager {
         }
         String lower = keyword.trim().toLowerCase();
         return items.stream()
-                .filter(item -> item.getName().toLowerCase().contains(lower))
+                .filter(item -> item.getName().toLowerCase().contains(lower) ||
+                                item.getCategory().toLowerCase().contains(lower) ||
+                                String.valueOf(item.getId()).contains(lower))
                 .collect(Collectors.toList());
     }
 
@@ -151,20 +172,29 @@ public class InventoryManager {
     }
 
     /**
+     * Filters inventory items by their category.
+     *
+     * @param category The category to filter by.
+     * @return List of items matching category.
+     */
+    public List<InventoryItem> filterByCategory(String category) {
+        if (category == null || category.trim().isEmpty() || category.equalsIgnoreCase("All Categories")) {
+            return getAllItems();
+        }
+        return items.stream()
+                .filter(item -> item.getCategory().equalsIgnoreCase(category.trim()))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Updates an existing item's name and quantity.
-     * Handles non-existing items gracefully by returning {@code false}.
      *
      * @param id          Unique identifier of the target item.
      * @param newName     Updated product name. Cannot be empty.
      * @param newQuantity Updated stock quantity. Must be non-negative.
-     * @return {@code true} if the item was located and successfully updated;
-     *         {@code false} if no item with the given ID exists.
-     * @throws IllegalArgumentException if the updated name is empty or quantity is negative.
+     * @return {@code true} if updated; {@code false} if not found.
      */
     public boolean updateItem(int id, String newName, int newQuantity) {
-        InventoryItem.validateName(newName);
-        InventoryItem.validateQuantity(newQuantity);
-
         Optional<InventoryItem> optionalItem = findById(id);
         if (optionalItem.isPresent()) {
             InventoryItem item = optionalItem.get();
@@ -172,24 +202,19 @@ public class InventoryManager {
             item.setQuantity(newQuantity);
             return true;
         }
-        // Graceful handling for non-existent item
         return false;
     }
 
     /**
-     * Updates an existing item's name, quantity, and explicit status override.
+     * Updates an existing item's name, quantity, and status.
      *
-     * @param id          Unique identifier of the target item.
-     * @param newName     Updated product name. Cannot be empty.
-     * @param newQuantity Updated stock quantity. Must be non-negative.
-     * @param newStatus   Explicit status override (or null for automatic).
-     * @return {@code true} if updated successfully; {@code false} if item not found.
-     * @throws IllegalArgumentException if name is invalid or quantity is negative.
+     * @param id          Target item ID.
+     * @param newName     Updated name.
+     * @param newQuantity Updated quantity.
+     * @param newStatus   Status override.
+     * @return {@code true} if updated; {@code false} otherwise.
      */
     public boolean updateItem(int id, String newName, int newQuantity, StockStatus newStatus) {
-        InventoryItem.validateName(newName);
-        InventoryItem.validateQuantity(newQuantity);
-
         Optional<InventoryItem> optionalItem = findById(id);
         if (optionalItem.isPresent()) {
             InventoryItem item = optionalItem.get();
@@ -202,10 +227,39 @@ public class InventoryManager {
     }
 
     /**
+     * Updates an existing item with full details: name, category, unit price, quantity, and status.
+     *
+     * @param id          Target item ID.
+     * @param newName     Updated name.
+     * @param newCategory Updated category.
+     * @param newPrice    Updated unit price.
+     * @param newQuantity Updated quantity.
+     * @param newStatus   Status override (or null for auto).
+     * @return {@code true} if updated; {@code false} if not found.
+     */
+    public boolean updateItem(int id, String newName, String newCategory, double newPrice, int newQuantity, StockStatus newStatus) {
+        InventoryItem.validateName(newName);
+        InventoryItem.validatePrice(newPrice);
+        InventoryItem.validateQuantity(newQuantity);
+
+        Optional<InventoryItem> optionalItem = findById(id);
+        if (optionalItem.isPresent()) {
+            InventoryItem item = optionalItem.get();
+            item.setName(newName);
+            item.setCategory(newCategory);
+            item.setUnitPrice(newPrice);
+            item.setQuantity(newQuantity);
+            item.setStatus(newStatus);
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Removes an item from the inventory by its unique identifier.
      *
      * @param id Identifier of the item to delete.
-     * @return {@code true} if the item was found and deleted; {@code false} otherwise.
+     * @return {@code true} if deleted; {@code false} otherwise.
      */
     public boolean deleteItem(int id) {
         return items.removeIf(item -> item.getId() == id);
@@ -228,6 +282,15 @@ public class InventoryManager {
     }
 
     /**
+     * Calculates the cumulative total net worth (monetary value) of the entire inventory.
+     *
+     * @return Sum of (unitPrice * quantity) across all items.
+     */
+    public double getTotalInventoryValue() {
+        return items.stream().mapToDouble(InventoryItem::getTotalValue).sum();
+    }
+
+    /**
      * Counts the number of items that are currently Low Stock.
      *
      * @return Number of items needing replenishment.
@@ -243,5 +306,41 @@ public class InventoryManager {
      */
     public long getOutOfStockCount() {
         return items.stream().filter(i -> i.getStatus() == StockStatus.OUT_OF_STOCK).count();
+    }
+
+    /**
+     * Exports the current inventory to a standard Comma-Separated Values (CSV) file.
+     *
+     * @param file Target output file.
+     * @throws IOException if writing fails.
+     */
+    public void exportToCSV(File file) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, StandardCharsets.UTF_8))) {
+            writer.write("ID,Item Name,Category,Unit Price ($),Quantity,Total Value ($),Stock Status,Last Modified");
+            writer.newLine();
+
+            for (InventoryItem item : items) {
+                String safeName = escapeCSV(item.getName());
+                String safeCategory = escapeCSV(item.getCategory());
+                writer.write(String.format("%d,%s,%s,%.2f,%d,%.2f,%s,%s",
+                        item.getId(),
+                        safeName,
+                        safeCategory,
+                        item.getUnitPrice(),
+                        item.getQuantity(),
+                        item.getTotalValue(),
+                        item.getStatus().getDisplayName(),
+                        item.getLastUpdated()));
+                writer.newLine();
+            }
+        }
+    }
+
+    private String escapeCSV(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 }
