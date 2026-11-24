@@ -316,7 +316,7 @@ public class InventoryManager {
      */
     public void exportToCSV(File file) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, StandardCharsets.UTF_8))) {
-            writer.write("ID,Item Name,Category,Unit Price ($),Quantity,Total Value ($),Stock Status,Last Modified");
+            writer.write("ID,Item Name,Category,Unit Price (PKR),Quantity,Total Value (PKR),Stock Status,Last Modified");
             writer.newLine();
 
             for (InventoryItem item : items) {

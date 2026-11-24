@@ -146,7 +146,7 @@ public class InventoryGUI extends JFrame {
 
         RoundedPanel cardTotalItems = createClickableKpiCard("Total Items", "0", COLOR_TOTAL_ITEMS, "ALL_STATUS", null);
         RoundedPanel cardTotalUnits = createClickableKpiCard("Total Units", "0", COLOR_TOTAL_UNITS, "ALL_STATUS", null);
-        RoundedPanel cardNetWorth   = createClickableKpiCard("Net Worth", "$0.00", COLOR_NET_WORTH, "ALL_STATUS", null);
+        RoundedPanel cardNetWorth   = createClickableKpiCard("Net Worth", "PKR 0.00", COLOR_NET_WORTH, "ALL_STATUS", null);
         RoundedPanel cardLowStock   = createClickableKpiCard("Low Stock", "0", COLOR_LOW_STOCK, "Low Stock", null);
         RoundedPanel cardOutOfStock = createClickableKpiCard("Out of Stock", "0", COLOR_OUT_STOCK, "Out of Stock", null);
 
@@ -247,8 +247,8 @@ public class InventoryGUI extends JFrame {
         fieldsPanel.add(comboCategory);
         fieldsPanel.add(Box.createVerticalStrut(8));
 
-        // Unit Price ($)
-        fieldsPanel.add(createFieldLabel("Unit Price ($): * (e.g. 19.99)"));
+        // Unit Price (PKR)
+        fieldsPanel.add(createFieldLabel("Unit Price (PKR): * (e.g. 25000)"));
         txtPrice = createStyledTextField();
         txtPrice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         txtPrice.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -393,7 +393,7 @@ public class InventoryGUI extends JFrame {
         tableContainer.add(toolbar, BorderLayout.NORTH);
 
         // JTable Configuration with 8 columns (ID, Name, Category, Price, Qty, Total, Status, Modified)
-        String[] columnNames = {"ID", "Item Name", "Category", "Unit Price", "Quantity", "Total Value", "Stock Status", "Last Modified"};
+        String[] columnNames = {"ID", "Item Name", "Category", "Unit Price (PKR)", "Quantity", "Total Value (PKR)", "Stock Status", "Last Modified"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             private static final long serialVersionUID = 1L;
             @Override
@@ -446,12 +446,12 @@ public class InventoryGUI extends JFrame {
         itemTable.getColumnModel().getColumn(1).setCellRenderer(leftRenderer);   // Name
         itemTable.getColumnModel().getColumn(2).setCellRenderer(centerRenderer); // Category
         itemTable.getColumnModel().getColumn(2).setPreferredWidth(100);
-        itemTable.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);  // Unit Price
-        itemTable.getColumnModel().getColumn(3).setPreferredWidth(90);
+        itemTable.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);  // Unit Price (PKR)
+        itemTable.getColumnModel().getColumn(3).setPreferredWidth(125);
         itemTable.getColumnModel().getColumn(4).setCellRenderer(centerRenderer); // Quantity
         itemTable.getColumnModel().getColumn(4).setMaxWidth(80);
-        itemTable.getColumnModel().getColumn(5).setCellRenderer(rightRenderer);  // Total Value
-        itemTable.getColumnModel().getColumn(5).setPreferredWidth(95);
+        itemTable.getColumnModel().getColumn(5).setCellRenderer(rightRenderer);  // Total Value (PKR)
+        itemTable.getColumnModel().getColumn(5).setPreferredWidth(135);
         itemTable.getColumnModel().getColumn(6).setCellRenderer(new StatusBadgeRenderer()); // Status
         itemTable.getColumnModel().getColumn(6).setPreferredWidth(120);
         itemTable.getColumnModel().getColumn(7).setCellRenderer(centerRenderer); // Last Modified
@@ -537,36 +537,36 @@ public class InventoryGUI extends JFrame {
     }
 
     private void populateSampleData() {
-        manager.addItem(new InventoryItem(0, "Apple MacBook Pro 16\" M3 Max", "Electronics", 3499.00, 6));
-        manager.addItem(new InventoryItem(0, "Dell XPS 15 OLED Laptop", "Electronics", 1899.00, 4));
-        manager.addItem(new InventoryItem(0, "ASUS ROG Zephyrus G14", "Electronics", 1599.99, 3));
-        manager.addItem(new InventoryItem(0, "NVIDIA GeForce RTX 4090 24GB", "Electronics", 1799.00, 2));
-        manager.addItem(new InventoryItem(0, "AMD Ryzen 9 7950X Processor", "Electronics", 549.00, 8));
-        manager.addItem(new InventoryItem(0, "Intel Core i9-14900K Desktop CPU", "Electronics", 589.00, 5));
-        manager.addItem(new InventoryItem(0, "Samsung 990 PRO 2TB NVMe SSD", "Electronics", 179.99, 18));
-        manager.addItem(new InventoryItem(0, "Corsair Vengeance 32GB DDR5 RAM", "Electronics", 119.99, 14));
-        manager.addItem(new InventoryItem(0, "Dell UltraSharp 27\" 4K Monitor", "Electronics", 449.00, 7));
-        manager.addItem(new InventoryItem(0, "LG UltraGear 34\" Curved Gaming Monitor", "Electronics", 799.99, 3));
-        manager.addItem(new InventoryItem(0, "Sony WH-1000XM5 Wireless Headphones", "Electronics", 398.00, 9));
-        manager.addItem(new InventoryItem(0, "Apple iPad Air 11\" M2 128GB", "Electronics", 599.00, 11));
-        manager.addItem(new InventoryItem(0, "Samsung Galaxy Tab S9 Ultra", "Electronics", 1199.99, 2));
-        manager.addItem(new InventoryItem(0, "Logitech MX Master 3S Wireless Mouse", "Accessories", 99.99, 24));
-        manager.addItem(new InventoryItem(0, "Keychron Q1 Pro Mechanical Keyboard", "Accessories", 199.00, 8));
-        manager.addItem(new InventoryItem(0, "Logitech Brio 4K Ultra HD Webcam", "Electronics", 199.99, 12));
-        manager.addItem(new InventoryItem(0, "Shure SM7B Cardioid Dynamic Mic", "Electronics", 399.00, 4));
-        manager.addItem(new InventoryItem(0, "Elgato Stream Deck MK.2", "Accessories", 149.99, 6));
-        manager.addItem(new InventoryItem(0, "ASUS ROG Rapture GT-AXE16000 Router", "Electronics", 599.99, 3));
-        manager.addItem(new InventoryItem(0, "Anker 737 Power Bank 24,000mAh", "Electronics", 149.99, 15));
-        manager.addItem(new InventoryItem(0, "Belkin MagSafe 3-in-1 Wireless Charger", "Accessories", 129.99, 10));
-        manager.addItem(new InventoryItem(0, "Seagate IronWolf 8TB NAS HDD", "Electronics", 199.99, 5));
-        manager.addItem(new InventoryItem(0, "Corsair RM1000x 1000W Power Supply", "Electronics", 189.99, 7));
-        manager.addItem(new InventoryItem(0, "NZXT Kraken Elite 360 RGB Liquid Cooler", "Electronics", 279.99, 4));
-        manager.addItem(new InventoryItem(0, "Apple Watch Ultra 2 GPS + Cellular", "Electronics", 799.00, 6));
-        manager.addItem(new InventoryItem(0, "Samsung Galaxy S24 Ultra 512GB", "Electronics", 1299.99, 8));
-        manager.addItem(new InventoryItem(0, "Sony PlayStation 5 Slim Digital", "Electronics", 449.99, 0));
-        manager.addItem(new InventoryItem(0, "Nintendo Switch OLED Model", "Electronics", 349.99, 0));
-        manager.addItem(new InventoryItem(0, "Meta Quest 3 128GB VR Headset", "Electronics", 499.99, 5));
-        manager.addItem(new InventoryItem(0, "Anker USB-C 100W Fast Charging Cable", "Accessories", 19.99, 35));
+        manager.addItem(new InventoryItem(0, "Apple MacBook Pro 16\" M3 Max", "Electronics", 980000.00, 6));
+        manager.addItem(new InventoryItem(0, "Dell XPS 15 OLED Laptop", "Electronics", 520000.00, 4));
+        manager.addItem(new InventoryItem(0, "ASUS ROG Zephyrus G14", "Electronics", 440000.00, 3));
+        manager.addItem(new InventoryItem(0, "NVIDIA GeForce RTX 4090 24GB", "Electronics", 590000.00, 2));
+        manager.addItem(new InventoryItem(0, "AMD Ryzen 9 7950X Processor", "Electronics", 155000.00, 8));
+        manager.addItem(new InventoryItem(0, "Intel Core i9-14900K Desktop CPU", "Electronics", 165000.00, 5));
+        manager.addItem(new InventoryItem(0, "Samsung 990 PRO 2TB NVMe SSD", "Electronics", 52000.00, 18));
+        manager.addItem(new InventoryItem(0, "Corsair Vengeance 32GB DDR5 RAM", "Electronics", 35000.00, 14));
+        manager.addItem(new InventoryItem(0, "Dell UltraSharp 27\" 4K Monitor", "Electronics", 125000.00, 7));
+        manager.addItem(new InventoryItem(0, "LG UltraGear 34\" Curved Gaming Monitor", "Electronics", 220000.00, 3));
+        manager.addItem(new InventoryItem(0, "Sony WH-1000XM5 Wireless Headphones", "Electronics", 110000.00, 9));
+        manager.addItem(new InventoryItem(0, "Apple iPad Air 11\" M2 128GB", "Electronics", 175000.00, 11));
+        manager.addItem(new InventoryItem(0, "Samsung Galaxy Tab S9 Ultra", "Electronics", 330000.00, 2));
+        manager.addItem(new InventoryItem(0, "Logitech MX Master 3S Wireless Mouse", "Accessories", 28500.00, 24));
+        manager.addItem(new InventoryItem(0, "Keychron Q1 Pro Mechanical Keyboard", "Accessories", 58000.00, 8));
+        manager.addItem(new InventoryItem(0, "Logitech Brio 4K Ultra HD Webcam", "Electronics", 55000.00, 12));
+        manager.addItem(new InventoryItem(0, "Shure SM7B Cardioid Dynamic Mic", "Electronics", 115000.00, 4));
+        manager.addItem(new InventoryItem(0, "Elgato Stream Deck MK.2", "Accessories", 42000.00, 6));
+        manager.addItem(new InventoryItem(0, "ASUS ROG Rapture GT-AXE16000 Router", "Electronics", 170000.00, 3));
+        manager.addItem(new InventoryItem(0, "Anker 737 Power Bank 24,000mAh", "Electronics", 38000.00, 15));
+        manager.addItem(new InventoryItem(0, "Belkin MagSafe 3-in-1 Wireless Charger", "Accessories", 36000.00, 10));
+        manager.addItem(new InventoryItem(0, "Seagate IronWolf 8TB NAS HDD", "Electronics", 56000.00, 5));
+        manager.addItem(new InventoryItem(0, "Corsair RM1000x 1000W Power Supply", "Electronics", 54000.00, 7));
+        manager.addItem(new InventoryItem(0, "NZXT Kraken Elite 360 RGB Liquid Cooler", "Electronics", 78000.00, 4));
+        manager.addItem(new InventoryItem(0, "Apple Watch Ultra 2 GPS + Cellular", "Electronics", 240000.00, 6));
+        manager.addItem(new InventoryItem(0, "Samsung Galaxy S24 Ultra 512GB", "Electronics", 380000.00, 8));
+        manager.addItem(new InventoryItem(0, "Sony PlayStation 5 Slim Digital", "Electronics", 155000.00, 0));
+        manager.addItem(new InventoryItem(0, "Nintendo Switch OLED Model", "Electronics", 110000.00, 0));
+        manager.addItem(new InventoryItem(0, "Meta Quest 3 128GB VR Headset", "Electronics", 165000.00, 5));
+        manager.addItem(new InventoryItem(0, "Anker USB-C 100W Fast Charging Cable", "Accessories", 4500.00, 35));
     }
 
     public void refreshTable() {
@@ -580,9 +580,9 @@ public class InventoryGUI extends JFrame {
                     item.getId(),
                     item.getName(),
                     item.getCategory(),
-                    String.format("$%.2f", item.getUnitPrice()),
+                    String.format("PKR %,.2f", item.getUnitPrice()),
                     item.getQuantity(),
-                    String.format("$%.2f", item.getTotalValue()),
+                    String.format("PKR %,.2f", item.getTotalValue()),
                     item.getStatus(),
                     item.getLastUpdated()
             });
@@ -592,7 +592,7 @@ public class InventoryGUI extends JFrame {
     public void updateDashboard() {
         lblTotalItems.setText(String.valueOf(manager.getItemCount()));
         lblTotalUnits.setText(String.valueOf(manager.getTotalUnits()));
-        lblNetWorth.setText(String.format("$%,.2f", manager.getTotalInventoryValue()));
+        lblNetWorth.setText(String.format("PKR %,.2f", manager.getTotalInventoryValue()));
         lblLowStock.setText(String.valueOf(manager.getLowStockCount()));
         lblOutOfStock.setText(String.valueOf(manager.getOutOfStockCount()));
     }
@@ -641,10 +641,18 @@ public class InventoryGUI extends JFrame {
 
         double price;
         try {
-            price = Double.parseDouble(priceText.trim().replace("$", ""));
+            String sanitized = priceText.trim()
+                    .replace("PKR", "")
+                    .replace("pkr", "")
+                    .replace("Rs.", "")
+                    .replace("Rs", "")
+                    .replace("$", "")
+                    .replace(",", "")
+                    .trim();
+            price = Double.parseDouble(sanitized);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
-                    "Validation Error: Unit price must be a valid number (e.g. 19.99).",
+                    "Validation Error: Unit price must be a valid number (e.g. 25000).",
                     "Input Validation Error", JOptionPane.ERROR_MESSAGE);
             txtPrice.requestFocus();
             return;
@@ -717,7 +725,15 @@ public class InventoryGUI extends JFrame {
 
         double price;
         try {
-            price = Double.parseDouble(priceText.trim().replace("$", ""));
+            String sanitized = priceText.trim()
+                    .replace("PKR", "")
+                    .replace("pkr", "")
+                    .replace("Rs.", "")
+                    .replace("Rs", "")
+                    .replace("$", "")
+                    .replace(",", "")
+                    .trim();
+            price = Double.parseDouble(sanitized);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
                     "Validation Error: Unit price must be a valid number.",
@@ -840,7 +856,15 @@ public class InventoryGUI extends JFrame {
         selectedItemId = (int) tableModel.getValueAt(row, 0);
         String name = (String) tableModel.getValueAt(row, 1);
         String category = (String) tableModel.getValueAt(row, 2);
-        String priceStr = ((String) tableModel.getValueAt(row, 3)).replace("$", "").trim();
+        String rawPrice = (String) tableModel.getValueAt(row, 3);
+        String priceStr = rawPrice
+                .replace("PKR", "")
+                .replace("pkr", "")
+                .replace("Rs.", "")
+                .replace("Rs", "")
+                .replace("$", "")
+                .replace(",", "")
+                .trim();
         int quantity = (int) tableModel.getValueAt(row, 4);
         StockStatus status = (StockStatus) tableModel.getValueAt(row, 6);
 

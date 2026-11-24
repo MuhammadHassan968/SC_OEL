@@ -271,7 +271,7 @@ public class InventoryTest {
             double totalVal = manager.getTotalInventoryValue();
             boolean pass = Math.abs(totalVal - 6500.00) < 0.001;
 
-            recordResult(testId, description, pass, pass ? "Total Net Worth correctly calculated ($6,500.00)" : "Net worth calculation error");
+            recordResult(testId, description, pass, pass ? "Total Net Worth correctly calculated (PKR 6,500.00)" : "Net worth calculation error");
         } catch (Exception e) {
             recordResult(testId, description, false, "Failed: " + e.getMessage());
         }

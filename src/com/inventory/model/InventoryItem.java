@@ -236,7 +236,7 @@ public class InventoryItem implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("Item #%d: %s [%s] | Price: $%.2f | Qty: %d | Total: $%.2f | Status: %s | Updated: %s",
+        return String.format("Item #%d: %s [%s] | Price: PKR %,.2f | Qty: %d | Total: PKR %,.2f | Status: %s | Updated: %s",
                 id, name, category, unitPrice, quantity, getTotalValue(), status.getDisplayName(), lastUpdated);
     }
 }
