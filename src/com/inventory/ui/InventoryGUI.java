@@ -5,57 +5,91 @@ import com.inventory.model.StockStatus;
 import com.inventory.service.InventoryManager;
 
 import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.RoundRectangle2D;
 import java.io.File;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.DoubleFunction;
 
 /**
- * Modern Light SaaS Graphical User Interface (GUI) for the Inventory Management System using Java Swing.
- * Supports:
- * - 5 KPI Cards (including Total Net Worth)
- * - Category / Tag management and filtering
- * - Item unit pricing and total value calculations
- * - 1-Click CSV Inventory Report Export
+ * High-contrast SaaS GUI for the Inventory Management System (Java Swing).
+ * Supports 5 KPI cards, categories, unit pricing, total value and 1-click CSV export.
  *
  * @author Muhammad Hassan
- * @version 2.1
+ * @version 4.1
  */
 public class InventoryGUI extends JFrame {
 
     private static final long serialVersionUID = 1L;
 
-    /** Primary color palette constants */
-    private static final Color CANVAS_BG = new Color(0xF1, 0xF5, 0xF9);       // #F1F5F9
+    // ---------- High-contrast palette ----------
+    private static final Color CANVAS_BG = new Color(0x1E, 0x29, 0x3B);        // #1E293B dark slate canvas
+    private static final Color HEADER_BG = new Color(0x0F, 0x17, 0x2A);        // #0F172A navy header
+    private static final Color HEADER_BORDER = new Color(0x33, 0x41, 0x55);    // #334155
     private static final Color CARD_BG = Color.WHITE;
-    private static final Color BORDER_COLOR = new Color(0xE2, 0xE8, 0xF0);    // #E2E8F0
-    private static final Color TEXT_PRIMARY = new Color(0x0F, 0x17, 0x2A);    // #0F172A
-    private static final Color TEXT_MUTED = new Color(0x64, 0x74, 0x8B);      // #64748B
-    private static final Color FOCUS_COLOR = new Color(0x3B, 0x82, 0xF6);     // #3B82F6
-    private static final Color SELECTION_BG = new Color(0xEF, 0xF6, 0xFF);    // #EFF6FF
-    private static final Color DIVIDER_COLOR = new Color(0xF1, 0xF5, 0xF9);   // #F1F5F9
+    private static final Color BORDER_COLOR = new Color(0xCB, 0xD5, 0xE1);     // #CBD5E1
+    private static final Color INPUT_BORDER = new Color(0x94, 0xA3, 0xB8);     // #94A3B8
+    private static final Color TEXT_PRIMARY = new Color(0x0F, 0x17, 0x2A);     // #0F172A
+    private static final Color TEXT_LABEL = new Color(0x1E, 0x29, 0x3B);       // #1E293B
+    private static final Color TEXT_MUTED = new Color(0x47, 0x55, 0x69);       // #475569
+    private static final Color TEXT_ON_DARK = new Color(0xF8, 0xFA, 0xFC);     // #F8FAFC
+    private static final Color TEXT_ON_DARK_MUTED = new Color(0x94, 0xA3, 0xB8);
+    private static final Color FOCUS_COLOR = new Color(0x3B, 0x82, 0xF6);      // #3B82F6
+    private static final Color TABLE_HEADER_BG = new Color(0x1E, 0x3A, 0x8A);  // #1E3A8A deep blue
+    private static final Color ROW_ALT = new Color(0xF1, 0xF5, 0xF9);          // zebra
+    private static final Color ROW_HOVER = new Color(0xE0, 0xF2, 0xFE);        // #E0F2FE
+    private static final Color SELECTION_BG = new Color(0xBF, 0xDB, 0xFE);     // #BFDBFE
+    private static final Color DIVIDER_COLOR = new Color(0xE2, 0xE8, 0xF0);    // #E2E8F0
+    private static final Color READONLY_BG = new Color(0xE2, 0xE8, 0xF0);
 
-    private static final Color COLOR_TOTAL_ITEMS = new Color(0x3B, 0x82, 0xF6); // #3B82F6 Blue
-    private static final Color COLOR_TOTAL_UNITS = new Color(0x10, 0xB9, 0x81); // #10B981 Green
-    private static final Color COLOR_NET_WORTH   = new Color(0x8B, 0x5C, 0xF6); // #8B5CF6 Purple
-    private static final Color COLOR_LOW_STOCK   = new Color(0xF5, 0x9E, 0x0B); // #F59E0B Amber
-    private static final Color COLOR_OUT_STOCK   = new Color(0xEF, 0x44, 0x44); // #EF4444 Red
+    private static final Color COLOR_TOTAL_ITEMS = new Color(0x25, 0x63, 0xEB); // blue
+    private static final Color COLOR_TOTAL_UNITS = new Color(0x05, 0x96, 0x69); // green
+    private static final Color COLOR_NET_WORTH = new Color(0x7C, 0x3A, 0xED);   // purple
+    private static final Color COLOR_LOW_STOCK = new Color(0xD9, 0x77, 0x06);   // amber
+    private static final Color COLOR_OUT_STOCK = new Color(0xDC, 0x26, 0x26);   // red
+
+    // ---------- Shared fonts / borders (created once) ----------
+    private static final String FONT_NAME = "Segoe UI";
+    private static final Font F_REGULAR = new Font(FONT_NAME, Font.PLAIN, 13);
+    private static final Font F_BOLD = new Font(FONT_NAME, Font.BOLD, 13);
+    private static final Font F_SMALL = new Font(FONT_NAME, Font.PLAIN, 12);
+    private static final Font F_SMALL_BOLD = new Font(FONT_NAME, Font.BOLD, 12);
+
+    private static final Border INPUT_NORMAL = new CompoundBorder(
+            BorderFactory.createLineBorder(INPUT_BORDER, 1, true), new EmptyBorder(7, 8, 7, 8));
+    private static final Border INPUT_FOCUSED = new CompoundBorder(
+            BorderFactory.createLineBorder(FOCUS_COLOR, 2, true), new EmptyBorder(6, 7, 6, 7));
 
     private static final String[] CATEGORY_OPTIONS = {
             "Electronics", "Accessories", "Office Supplies", "Groceries", "Hardware", "General"
     };
+
+    private static final String ALL_CATEGORIES = "All Categories";
+    private static final String ALL_STATUSES = "All Statuses";
+    private static final String KPI_ITEMS = "Total Items";
+    private static final String KPI_UNITS = "Total Units";
+    private static final String KPI_WORTH = "Net Worth";
+    private static final String KPI_LOW = "Low Stock";
+    private static final String KPI_OUT = "Out of Stock";
 
     private final InventoryManager manager;
 
@@ -67,23 +101,29 @@ public class InventoryGUI extends JFrame {
     private JTextField txtQuantity;
     private JComboBox<String> comboStatus;
 
-    // Search and Filters
+    // Search and filters
     private JTextField txtSearch;
     private JComboBox<String> comboCategoryFilter;
     private JComboBox<String> comboStatusFilter;
+    private javax.swing.Timer searchDebounce;
 
-    // Dashboard Metric Labels
+    // Dashboard
     private JLabel lblTotalItems;
     private JLabel lblTotalUnits;
     private JLabel lblNetWorth;
     private JLabel lblLowStock;
     private JLabel lblOutOfStock;
+    private JLabel lblStatusMsg;
+    private final Map<String, RoundedPanel> kpiCards = new LinkedHashMap<>();
 
     // Table
     private JTable itemTable;
     private DefaultTableModel tableModel;
 
     private int selectedItemId = -1;
+
+    /** Validated form values. */
+    private record FormData(String name, String category, double price, int quantity, StockStatus status) { }
 
     public InventoryGUI(InventoryManager manager) {
         this.manager = manager;
@@ -93,112 +133,131 @@ public class InventoryGUI extends JFrame {
         updateDashboard();
     }
 
+    // =====================================================================
+    // UI construction
+    // =====================================================================
+
     private void initUI() {
         setTitle("HR Traders - Inventory Management System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1200, 780);
-        setMinimumSize(new Dimension(980, 680));
+        setSize(1280, 800);
+        setMinimumSize(new Dimension(1120, 680));
         setLocationRelativeTo(null);
 
         JPanel mainPanel = new JPanel(new BorderLayout(14, 14));
-        mainPanel.setBorder(new EmptyBorder(16, 16, 16, 16));
+        mainPanel.setBorder(new EmptyBorder(16, 16, 10, 16));
         mainPanel.setBackground(CANVAS_BG);
 
-        // Header Panel with title and 5 clickable KPI metric cards
         mainPanel.add(createHeaderPanel(), BorderLayout.NORTH);
 
-        // Split: Form on Left, Table on Center
         JPanel contentPanel = new JPanel(new BorderLayout(14, 14));
         contentPanel.setOpaque(false);
         contentPanel.add(createFormPanel(), BorderLayout.WEST);
         contentPanel.add(createTablePanel(), BorderLayout.CENTER);
-
         mainPanel.add(contentPanel, BorderLayout.CENTER);
-        mainPanel.add(createStatusBar(), BorderLayout.SOUTH);
 
+        mainPanel.add(createStatusBar(), BorderLayout.SOUTH);
         setContentPane(mainPanel);
+
+        installDynamics();
     }
 
     private JPanel createHeaderPanel() {
-        JPanel headerCard = new RoundedPanel(12, CARD_BG, BORDER_COLOR);
-        headerCard.setLayout(new BorderLayout(14, 14));
-        headerCard.setBorder(new EmptyBorder(14, 16, 14, 16));
+        RoundedPanel headerCard = new RoundedPanel(12, HEADER_BG, HEADER_BORDER);
+        headerCard.setLayout(new BorderLayout(16, 16));
+        headerCard.setBorder(new EmptyBorder(14, 20, 14, 16));
 
-        // Title and subtitle
         JPanel titlePanel = new JPanel(new GridLayout(2, 1, 2, 2));
         titlePanel.setOpaque(false);
 
         JLabel titleLabel = new JLabel("HR Traders");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setFont(new Font(FONT_NAME, Font.BOLD, 24));
+        titleLabel.setForeground(TEXT_ON_DARK);
 
-        JLabel subLabel = new JLabel("Inventory Management System | Real-time stock tracking & valuation analytics");
-        subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        subLabel.setForeground(TEXT_MUTED);
+        JLabel subLabel = new JLabel("Inventory Management System");
+        subLabel.setFont(F_SMALL);
+        subLabel.setForeground(TEXT_ON_DARK_MUTED);
 
         titlePanel.add(titleLabel);
         titlePanel.add(subLabel);
         headerCard.add(titlePanel, BorderLayout.WEST);
 
-        // 5 KPI Cards in a FlowLayout
-        JPanel kpiContainer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel kpiContainer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         kpiContainer.setOpaque(false);
 
-        RoundedPanel cardTotalItems = createClickableKpiCard("Total Items", "0", COLOR_TOTAL_ITEMS, "ALL_STATUS", null);
-        RoundedPanel cardTotalUnits = createClickableKpiCard("Total Units", "0", COLOR_TOTAL_UNITS, "ALL_STATUS", null);
-        RoundedPanel cardNetWorth   = createClickableKpiCard("Net Worth", "PKR 0.00", COLOR_NET_WORTH, "ALL_STATUS", null);
-        RoundedPanel cardLowStock   = createClickableKpiCard("Low Stock", "0", COLOR_LOW_STOCK, "Low Stock", null);
-        RoundedPanel cardOutOfStock = createClickableKpiCard("Out of Stock", "0", COLOR_OUT_STOCK, "Out of Stock", null);
+        RoundedPanel cItems = createKpiCard(KPI_ITEMS, COLOR_TOTAL_ITEMS, 112, 22, "All Statuses");
+        RoundedPanel cUnits = createKpiCard(KPI_UNITS, COLOR_TOTAL_UNITS, 112, 22, "All Statuses");
+        RoundedPanel cWorth = createKpiCard(KPI_WORTH, COLOR_NET_WORTH, 190, 17, "All Statuses");
+        RoundedPanel cLow = createKpiCard(KPI_LOW, COLOR_LOW_STOCK, 112, 22, "Low Stock");
+        RoundedPanel cOut = createKpiCard(KPI_OUT, COLOR_OUT_STOCK, 112, 22, "Out of Stock");
 
-        lblTotalItems = (JLabel) cardTotalItems.getClientProperty("valueLabel");
-        lblTotalUnits = (JLabel) cardTotalUnits.getClientProperty("valueLabel");
-        lblNetWorth   = (JLabel) cardNetWorth.getClientProperty("valueLabel");
-        lblLowStock   = (JLabel) cardLowStock.getClientProperty("valueLabel");
-        lblOutOfStock = (JLabel) cardOutOfStock.getClientProperty("valueLabel");
+        lblTotalItems = valueLabelOf(cItems);
+        lblTotalUnits = valueLabelOf(cUnits);
+        lblNetWorth = valueLabelOf(cWorth);
+        lblLowStock = valueLabelOf(cLow);
+        lblOutOfStock = valueLabelOf(cOut);
 
-        kpiContainer.add(cardTotalItems);
-        kpiContainer.add(cardTotalUnits);
-        kpiContainer.add(cardNetWorth);
-        kpiContainer.add(cardLowStock);
-        kpiContainer.add(cardOutOfStock);
-
+        kpiContainer.add(cItems);
+        kpiContainer.add(cUnits);
+        kpiContainer.add(cWorth);
+        kpiContainer.add(cLow);
+        kpiContainer.add(cOut);
         headerCard.add(kpiContainer, BorderLayout.EAST);
         return headerCard;
     }
 
-    private RoundedPanel createClickableKpiCard(String title, String value, Color accentColor, String targetStatus, String targetCat) {
-        RoundedPanel card = new RoundedPanel(12, CARD_BG, BORDER_COLOR, accentColor, 4);
+    private static JLabel valueLabelOf(RoundedPanel card) {
+        return (JLabel) card.getClientProperty("valueLabel");
+    }
+
+    /** Solid-color clickable KPI card. targetStatus is the status filter applied on click. */
+    private RoundedPanel createKpiCard(String title, Color color, int width, int valueSize, String targetStatus) {
+        RoundedPanel card = new RoundedPanel(12, color, color, color, 4, true);
         card.setLayout(new GridLayout(2, 1, 2, 2));
-        card.setBorder(new EmptyBorder(8, 14, 8, 14));
+        card.setBorder(new EmptyBorder(10, 18, 10, 12));
+        card.setPreferredSize(new Dimension(width, 64));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        card.setToolTipText("Click to filter table");
+        card.setToolTipText("Click to filter table (click again to reset)");
 
         JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        titleLbl.setForeground(TEXT_MUTED);
+        titleLbl.setFont(new Font(FONT_NAME, Font.BOLD, 11));
+        titleLbl.setForeground(new Color(0xF1, 0xF5, 0xF9));
 
-        JLabel valLbl = new JLabel(value);
-        valLbl.setFont(new Font("Segoe UI", Font.BOLD, 17));
-        valLbl.setForeground(accentColor);
+        JLabel valLbl = new JLabel("0");
+        valLbl.setFont(new Font(FONT_NAME, Font.BOLD, valueSize));
+        valLbl.setForeground(Color.WHITE);
 
         card.add(titleLbl);
         card.add(valLbl);
         card.putClientProperty("valueLabel", valLbl);
+        kpiCards.put(title, card);
 
         card.addMouseListener(new MouseAdapter() {
             @Override
+            public void mouseEntered(MouseEvent e) {
+                card.setHovered(true);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                card.setHovered(false);
+            }
+
+            @Override
             public void mouseClicked(MouseEvent e) {
-                if (targetStatus != null && comboStatusFilter != null) {
-                    if ("ALL_STATUS".equals(targetStatus)) {
-                        comboStatusFilter.setSelectedIndex(0);
-                    } else {
-                        comboStatusFilter.setSelectedItem(targetStatus);
-                    }
-                    applySearchAndFilter();
+                if (comboStatusFilter == null) {
+                    return;
                 }
+                boolean toggleOff = !"All Statuses".equals(targetStatus)
+                        && targetStatus.equals(comboStatusFilter.getSelectedItem());
+                if (toggleOff || "All Statuses".equals(targetStatus)) {
+                    comboStatusFilter.setSelectedIndex(0);
+                } else {
+                    comboStatusFilter.setSelectedItem(targetStatus);
+                }
+                // combo listener triggers applySearchAndFilter()
             }
         });
-
         return card;
     }
 
@@ -208,83 +267,50 @@ public class InventoryGUI extends JFrame {
         formContainer.setPreferredSize(new Dimension(330, 0));
         formContainer.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        JPanel fieldsPanel = new JPanel();
-        fieldsPanel.setLayout(new BoxLayout(fieldsPanel, BoxLayout.Y_AXIS));
-        fieldsPanel.setOpaque(false);
+        JPanel fields = new JPanel();
+        fields.setLayout(new BoxLayout(fields, BoxLayout.Y_AXIS));
+        fields.setOpaque(false);
 
-        JLabel formHeading = new JLabel("Product Details");
-        formHeading.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        formHeading.setForeground(TEXT_PRIMARY);
-        formHeading.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fieldsPanel.add(formHeading);
-        fieldsPanel.add(Box.createVerticalStrut(12));
+        JLabel heading = new JLabel("Product Details");
+        heading.setFont(new Font(FONT_NAME, Font.BOLD, 16));
+        heading.setForeground(COLOR_TOTAL_ITEMS);
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fields.add(heading);
+        fields.add(Box.createVerticalStrut(12));
 
-        // ID (Read-only)
-        fieldsPanel.add(createFieldLabel("Item ID (Auto-Generated):"));
         txtId = createStyledTextField();
         txtId.setEditable(false);
-        txtId.setBackground(new Color(0xF8, 0xFA, 0xFC));
-        txtId.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        txtId.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fieldsPanel.add(txtId);
-        fieldsPanel.add(Box.createVerticalStrut(8));
+        txtId.setBackground(READONLY_BG);
+        addField(fields, "Item ID (Auto-Generated):", txtId);
 
-        // Name
-        fieldsPanel.add(createFieldLabel("Item Name: *"));
         txtName = createStyledTextField();
-        txtName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        txtName.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fieldsPanel.add(txtName);
-        fieldsPanel.add(Box.createVerticalStrut(8));
+        addField(fields, "Item Name: *", txtName);
 
-        // Category / Tag
-        fieldsPanel.add(createFieldLabel("Category / Department: *"));
         comboCategory = new JComboBox<>(CATEGORY_OPTIONS);
-        comboCategory.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        comboCategory.setBackground(Color.WHITE);
-        comboCategory.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        comboCategory.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fieldsPanel.add(comboCategory);
-        fieldsPanel.add(Box.createVerticalStrut(8));
+        styleCombo(comboCategory);
+        addField(fields, "Category / Department: *", comboCategory);
 
-        // Unit Price (PKR)
-        fieldsPanel.add(createFieldLabel("Unit Price (PKR): * (e.g. 25000)"));
         txtPrice = createStyledTextField();
-        txtPrice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        txtPrice.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fieldsPanel.add(txtPrice);
-        fieldsPanel.add(Box.createVerticalStrut(8));
+        addField(fields, "Unit Price (PKR): * (e.g. 25000)", txtPrice);
 
-        // Quantity
-        fieldsPanel.add(createFieldLabel("Quantity: * (0 or greater)"));
         txtQuantity = createStyledTextField();
-        txtQuantity.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        txtQuantity.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fieldsPanel.add(txtQuantity);
-        fieldsPanel.add(Box.createVerticalStrut(8));
+        addField(fields, "Quantity: * (0 or greater)", txtQuantity);
 
-        // Status Override / Auto
-        fieldsPanel.add(createFieldLabel("Stock Status:"));
         comboStatus = new JComboBox<>(new String[]{"Auto (Calculated from Quantity)", "In Stock", "Low Stock", "Out of Stock"});
-        comboStatus.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        comboStatus.setBackground(Color.WHITE);
-        comboStatus.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        comboStatus.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fieldsPanel.add(comboStatus);
-        fieldsPanel.add(Box.createVerticalStrut(10));
+        styleCombo(comboStatus);
+        addField(fields, "Stock Status:", comboStatus);
 
-        JLabel noteLabel = new JLabel("<html><small style='color:#64748b; font-family: Segoe UI;'>"
+        JLabel note = new JLabel("<html><small style='color:#475569; font-family: Segoe UI;'>"
                 + "<b>Classification:</b><br>"
-                + "&bull; Qty = 0 &rarr; <font color='#991B1B'>Out of Stock</font><br>"
-                + "&bull; Qty 1 - 5 &rarr; <font color='#92400E'>Low Stock</font><br>"
-                + "&bull; Qty &gt; 5 &rarr; <font color='#166534'>In Stock</font>"
+                + "&bull; Qty = 0 &rarr; <font color='#991B1B'><b>Out of Stock</b></font><br>"
+                + "&bull; Qty 1 - 5 &rarr; <font color='#92400E'><b>Low Stock</b></font><br>"
+                + "&bull; Qty &gt; 5 &rarr; <font color='#166534'><b>In Stock</b></font>"
                 + "</small></html>");
-        noteLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fieldsPanel.add(noteLabel);
+        note.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fields.add(note);
 
-        formContainer.add(fieldsPanel, BorderLayout.CENTER);
+        formContainer.add(fields, BorderLayout.CENTER);
 
-        // Buttons in 2x2 grid with exact solid colors and high-contrast visible text
         JPanel buttonsGrid = new JPanel(new GridLayout(2, 2, 8, 8));
         buttonsGrid.setOpaque(false);
         buttonsGrid.setBorder(new EmptyBorder(10, 0, 0, 0));
@@ -292,7 +318,7 @@ public class InventoryGUI extends JFrame {
         RoundedButton btnAdd = new RoundedButton("Add Item", new Color(0x16, 0xA3, 0x4A), Color.WHITE, 8);
         RoundedButton btnUpdate = new RoundedButton("Update Item", new Color(0x25, 0x63, 0xEB), Color.WHITE, 8);
         RoundedButton btnDelete = new RoundedButton("Delete Item", new Color(0xDC, 0x26, 0x26), Color.WHITE, 8);
-        RoundedButton btnClear = new RoundedButton("Clear Form", new Color(0xE2, 0xE8, 0xF0), new Color(0x0F, 0x17, 0x2A), 8);
+        RoundedButton btnClear = new RoundedButton("Clear Form", new Color(0x33, 0x41, 0x55), Color.WHITE, 8);
 
         btnAdd.addActionListener(e -> handleAddItem());
         btnUpdate.addActionListener(e -> handleUpdateItem());
@@ -308,68 +334,71 @@ public class InventoryGUI extends JFrame {
         return formContainer;
     }
 
+    /** Adds a label + input pair to the vertical form with consistent sizing. */
+    private void addField(JPanel panel, String label, JComponent input) {
+        JLabel l = new JLabel(label);
+        l.setFont(F_SMALL_BOLD);
+        l.setForeground(TEXT_LABEL);
+        l.setAlignmentX(Component.LEFT_ALIGNMENT);
+        l.setBorder(new EmptyBorder(0, 0, 4, 0));
+        panel.add(l);
+
+        input.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        input.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(input);
+        panel.add(Box.createVerticalStrut(9));
+    }
+
     private JPanel createTablePanel() {
         RoundedPanel tableContainer = new RoundedPanel(12, CARD_BG, BORDER_COLOR);
         tableContainer.setLayout(new BorderLayout(12, 12));
         tableContainer.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        // Toolbar: Search, Category Filter, Status Filter, Export CSV, and View All
+        // ----- Toolbar -----
         JPanel toolbar = new JPanel(new BorderLayout(8, 8));
         toolbar.setOpaque(false);
 
-        // Search Box
         JPanel searchBox = new JPanel(new BorderLayout(6, 6));
         searchBox.setOpaque(false);
         JLabel lblSearch = new JLabel("Search:");
-        lblSearch.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblSearch.setFont(F_SMALL_BOLD);
         lblSearch.setForeground(TEXT_PRIMARY);
 
         txtSearch = createStyledTextField();
         txtSearch.setToolTipText("Filter by name, ID, or category...");
-        txtSearch.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                applySearchAndFilter();
-            }
-        });
         searchBox.add(lblSearch, BorderLayout.WEST);
         searchBox.add(txtSearch, BorderLayout.CENTER);
         toolbar.add(searchBox, BorderLayout.CENTER);
 
-        // Right Toolbar Filters & Actions
-        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        actionsPanel.setOpaque(false);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        actions.setOpaque(false);
 
-        // Category Filter
-        JLabel lblCatFilter = new JLabel("Category:");
-        lblCatFilter.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        lblCatFilter.setForeground(TEXT_PRIMARY);
+        JLabel lblCat = new JLabel("Category:");
+        lblCat.setFont(F_SMALL_BOLD);
+        lblCat.setForeground(TEXT_PRIMARY);
 
-        String[] catFilterItems = new String[CATEGORY_OPTIONS.length + 1];
-        catFilterItems[0] = "All Categories";
-        System.arraycopy(CATEGORY_OPTIONS, 0, catFilterItems, 1, CATEGORY_OPTIONS.length);
-        comboCategoryFilter = new JComboBox<>(catFilterItems);
-        comboCategoryFilter.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        comboCategoryFilter.setBackground(Color.WHITE);
+        String[] catItems = new String[CATEGORY_OPTIONS.length + 1];
+        catItems[0] = ALL_CATEGORIES;
+        System.arraycopy(CATEGORY_OPTIONS, 0, catItems, 1, CATEGORY_OPTIONS.length);
+        comboCategoryFilter = new JComboBox<>(catItems);
+        styleCombo(comboCategoryFilter);
         comboCategoryFilter.addActionListener(e -> applySearchAndFilter());
 
-        // Status Filter
-        JLabel lblStatFilter = new JLabel("Status:");
-        lblStatFilter.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        lblStatFilter.setForeground(TEXT_PRIMARY);
+        JLabel lblStat = new JLabel("Status:");
+        lblStat.setFont(F_SMALL_BOLD);
+        lblStat.setForeground(TEXT_PRIMARY);
 
-        comboStatusFilter = new JComboBox<>(new String[]{"All Statuses", "In Stock", "Low Stock", "Out of Stock"});
-        comboStatusFilter.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        comboStatusFilter.setBackground(Color.WHITE);
+        comboStatusFilter = new JComboBox<>(new String[]{ALL_STATUSES, "In Stock", "Low Stock", "Out of Stock"});
+        styleCombo(comboStatusFilter);
         comboStatusFilter.addActionListener(e -> applySearchAndFilter());
 
-        // View All Button
-        RoundedButton btnRefresh = new RoundedButton("View All", new Color(0xF1, 0xF5, 0xF9), TEXT_PRIMARY, 6);
+        RoundedButton btnRefresh = new RoundedButton("View All", new Color(0x1E, 0x3A, 0x8A), Color.WHITE, 8);
         btnRefresh.addActionListener(e -> {
             txtSearch.setText("");
             comboCategoryFilter.setSelectedIndex(0);
             comboStatusFilter.setSelectedIndex(0);
             refreshTable();
+            applySearchAndFilter();
             if (manager.isEmpty()) {
                 JOptionPane.showMessageDialog(this,
                         "The inventory is currently empty. Use the left form to add your first product.",
@@ -377,25 +406,26 @@ public class InventoryGUI extends JFrame {
             }
         });
 
-        // 1-Click Export CSV Button
-        RoundedButton btnExport = new RoundedButton("Export CSV", new Color(0x05, 0x96, 0x69), Color.WHITE, 6);
+        RoundedButton btnExport = new RoundedButton("Export CSV", new Color(0x05, 0x96, 0x69), Color.WHITE, 8);
         btnExport.setToolTipText("Export inventory report as CSV for Excel / printing");
         btnExport.addActionListener(e -> handleExportCSV());
 
-        actionsPanel.add(lblCatFilter);
-        actionsPanel.add(comboCategoryFilter);
-        actionsPanel.add(lblStatFilter);
-        actionsPanel.add(comboStatusFilter);
-        actionsPanel.add(btnRefresh);
-        actionsPanel.add(btnExport);
+        actions.add(lblCat);
+        actions.add(comboCategoryFilter);
+        actions.add(lblStat);
+        actions.add(comboStatusFilter);
+        actions.add(btnRefresh);
+        actions.add(btnExport);
 
-        toolbar.add(actionsPanel, BorderLayout.EAST);
+        toolbar.add(actions, BorderLayout.EAST);
         tableContainer.add(toolbar, BorderLayout.NORTH);
 
-        // JTable Configuration with 8 columns (ID, Name, Category, Price, Qty, Total, Status, Modified)
-        String[] columnNames = {"ID", "Item Name", "Category", "Unit Price (PKR)", "Quantity", "Total Value (PKR)", "Stock Status", "Last Modified"};
+        // ----- Table -----
+        String[] columnNames = {"ID", "Item Name", "Category", "Unit Price (PKR)", "Quantity",
+                "Total Value (PKR)", "Stock Status", "Last Modified"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             private static final long serialVersionUID = 1L;
+
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -404,64 +434,65 @@ public class InventoryGUI extends JFrame {
 
         itemTable = new JTable(tableModel);
         itemTable.setRowHeight(42);
-        itemTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        itemTable.setFont(F_REGULAR);
         itemTable.setForeground(TEXT_PRIMARY);
         itemTable.setBackground(Color.WHITE);
         itemTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        itemTable.setFillsViewportHeight(true);
 
-        // Horizontal dividers only (#F1F5F9)
         itemTable.setShowGrid(false);
         itemTable.setShowHorizontalLines(true);
         itemTable.setShowVerticalLines(false);
         itemTable.setGridColor(DIVIDER_COLOR);
+        itemTable.setIntercellSpacing(new Dimension(0, 1));
 
-        // Soft blue row selection (#EFF6FF with #0F172A text)
         itemTable.setSelectionBackground(SELECTION_BG);
         itemTable.setSelectionForeground(TEXT_PRIMARY);
 
-        // Header Styling: #F8FAFC bold header
+        // Per-column alignment: ID, Category, Qty, Status, Modified centered; name left; money right
+        int[] align = {SwingConstants.CENTER, SwingConstants.LEFT, SwingConstants.CENTER, SwingConstants.RIGHT,
+                SwingConstants.CENTER, SwingConstants.RIGHT, SwingConstants.CENTER, SwingConstants.CENTER};
+
         JTableHeader header = itemTable.getTableHeader();
-        header.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        header.setBackground(new Color(0xF8, 0xFA, 0xFC));
-        header.setForeground(TEXT_PRIMARY);
-        header.setPreferredSize(new Dimension(header.getWidth(), 38));
         header.setReorderingAllowed(false);
-        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
+        header.setPreferredSize(new Dimension(header.getWidth(), 42));
+        header.setDefaultRenderer(new HeaderRenderer(align));
 
-        // Column renderers
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        centerRenderer.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        CellRenderer cellRenderer = new CellRenderer(align);
+        for (int c = 0; c < columnNames.length; c++) {
+            if (c != 6) {
+                itemTable.getColumnModel().getColumn(c).setCellRenderer(cellRenderer);
+            }
+        }
+        itemTable.getColumnModel().getColumn(6).setCellRenderer(new StatusBadgeRenderer());
 
-        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
-        rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
-        rightRenderer.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-
-        DefaultTableCellRenderer leftRenderer = new DefaultTableCellRenderer();
-        leftRenderer.setHorizontalAlignment(SwingConstants.LEFT);
-        leftRenderer.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-
-        itemTable.getColumnModel().getColumn(0).setCellRenderer(centerRenderer); // ID
         itemTable.getColumnModel().getColumn(0).setMaxWidth(70);
-        itemTable.getColumnModel().getColumn(1).setCellRenderer(leftRenderer);   // Name
-        itemTable.getColumnModel().getColumn(2).setCellRenderer(centerRenderer); // Category
-        itemTable.getColumnModel().getColumn(2).setPreferredWidth(100);
-        itemTable.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);  // Unit Price (PKR)
-        itemTable.getColumnModel().getColumn(3).setPreferredWidth(125);
-        itemTable.getColumnModel().getColumn(4).setCellRenderer(centerRenderer); // Quantity
+        itemTable.getColumnModel().getColumn(2).setPreferredWidth(110);
+        itemTable.getColumnModel().getColumn(3).setPreferredWidth(135);
         itemTable.getColumnModel().getColumn(4).setMaxWidth(80);
-        itemTable.getColumnModel().getColumn(5).setCellRenderer(rightRenderer);  // Total Value (PKR)
-        itemTable.getColumnModel().getColumn(5).setPreferredWidth(135);
-        itemTable.getColumnModel().getColumn(6).setCellRenderer(new StatusBadgeRenderer()); // Status
-        itemTable.getColumnModel().getColumn(6).setPreferredWidth(120);
-        itemTable.getColumnModel().getColumn(7).setCellRenderer(centerRenderer); // Last Modified
+        itemTable.getColumnModel().getColumn(5).setPreferredWidth(145);
+        itemTable.getColumnModel().getColumn(6).setPreferredWidth(125);
 
-        // Row Selection Listener
+        // Row hover tracking (repaints only when the hovered row changes)
+        itemTable.putClientProperty("hoverRow", -1);
+        itemTable.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                setHoverRow(itemTable.rowAtPoint(e.getPoint()));
+            }
+        });
+        itemTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseExited(MouseEvent e) {
+                setHoverRow(-1);
+            }
+        });
+
         itemTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                int selectedRow = itemTable.getSelectedRow();
-                if (selectedRow >= 0) {
-                    populateFormFromSelectedRow(selectedRow);
+                int row = itemTable.getSelectedRow();
+                if (row >= 0) {
+                    populateFormFromSelectedRow(row);
                 }
             }
         });
@@ -469,72 +500,152 @@ public class InventoryGUI extends JFrame {
         JScrollPane scrollPane = new JScrollPane(itemTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
         scrollPane.setBackground(Color.WHITE);
-        scrollPane.getViewport().setBackground(Color.WHITE); // Eliminate gray background
+        scrollPane.getViewport().setBackground(Color.WHITE); // eliminate gray bottom block
 
         tableContainer.add(scrollPane, BorderLayout.CENTER);
         return tableContainer;
     }
 
+    private void setHoverRow(int row) {
+        Object cur = itemTable.getClientProperty("hoverRow");
+        if (!(cur instanceof Integer c) || c != row) {
+            itemTable.putClientProperty("hoverRow", row);
+            itemTable.repaint();
+        }
+    }
+
     private JPanel createStatusBar() {
         JPanel statusBar = new JPanel(new BorderLayout());
         statusBar.setOpaque(false);
-        statusBar.setBorder(new EmptyBorder(4, 4, 4, 4));
+        statusBar.setBorder(new EmptyBorder(2, 6, 0, 6));
 
-        JLabel lblStatus = new JLabel("Ready | Select any row to edit or delete. Click KPI cards to filter.");
-        lblStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        lblStatus.setForeground(TEXT_MUTED);
+        lblStatusMsg = new JLabel("Ready");
+        lblStatusMsg.setFont(F_SMALL);
+        lblStatusMsg.setForeground(new Color(0xE2, 0xE8, 0xF0));
 
         JLabel lblDesigner = new JLabel("Designed by Muhammad Hassan");
-        lblDesigner.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        lblDesigner.setForeground(TEXT_PRIMARY);
+        lblDesigner.setFont(F_SMALL_BOLD);
+        lblDesigner.setForeground(TEXT_ON_DARK_MUTED);
 
-        statusBar.add(lblStatus, BorderLayout.WEST);
+        statusBar.add(lblStatusMsg, BorderLayout.WEST);
         statusBar.add(lblDesigner, BorderLayout.EAST);
         return statusBar;
     }
 
-    private JLabel createFieldLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        label.setForeground(TEXT_PRIMARY);
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return label;
-    }
-
     private JTextField createStyledTextField() {
-        JTextField field = new JTextField();
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        final JTextField field = new JTextField() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Object hint = getClientProperty("hint");
+                if (hint != null && getText().isEmpty() && isEditable()) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                            RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                    g2.setColor(INPUT_BORDER);
+                    g2.setFont(getFont());
+                    FontMetrics fm = g2.getFontMetrics();
+                    g2.drawString(hint.toString(), getInsets().left,
+                            (getHeight() - fm.getHeight()) / 2 + fm.getAscent());
+                    g2.dispose();
+                }
+            }
+        };
+        field.setFont(F_REGULAR);
         field.setForeground(TEXT_PRIMARY);
         field.setBackground(Color.WHITE);
-        field.setCaretColor(TEXT_PRIMARY);
-
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-                new EmptyBorder(6, 8, 6, 8)
-        ));
-
+        field.setCaretColor(FOCUS_COLOR);
+        field.setBorder(INPUT_NORMAL);
         field.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
                 if (field.isEditable()) {
-                    field.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(FOCUS_COLOR, 1, true),
-                            new EmptyBorder(6, 8, 6, 8)
-                    ));
+                    field.setBorder(INPUT_FOCUSED);
                 }
             }
 
             @Override
             public void focusLost(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
-                        new EmptyBorder(6, 8, 6, 8)
-                ));
+                field.setBorder(INPUT_NORMAL);
+            }
+        });
+        return field;
+    }
+
+    private static void styleCombo(JComboBox<String> combo) {
+        combo.setFont(F_SMALL);
+        combo.setBackground(Color.WHITE);
+        combo.setForeground(TEXT_PRIMARY);
+        combo.setBorder(BorderFactory.createLineBorder(INPUT_BORDER, 1, true));
+        combo.setRenderer(new DefaultListCellRenderer() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean sel, boolean focus) {
+                JLabel l = (JLabel) super.getListCellRendererComponent(list, value, index, sel, false);
+                l.setFont(F_SMALL);
+                l.setBorder(new EmptyBorder(6, 10, 6, 10));
+                l.setBackground(sel ? SELECTION_BG : Color.WHITE);
+                l.setForeground(TEXT_PRIMARY);
+                return l;
+            }
+        });
+    }
+
+    /** Hints, keyboard shortcuts, debounced search and status messages. */
+    private void installDynamics() {
+        txtName.putClientProperty("hint", "e.g. Wireless Mouse");
+        txtPrice.putClientProperty("hint", "e.g. 25000");
+        txtQuantity.putClientProperty("hint", "0 or greater");
+        txtSearch.putClientProperty("hint", "Search by name, ID or category...");
+
+        // Enter moves forward; Enter on Quantity saves (update when editing, add otherwise)
+        txtName.addActionListener(e -> txtPrice.requestFocusInWindow());
+        txtPrice.addActionListener(e -> txtQuantity.requestFocusInWindow());
+        txtQuantity.addActionListener(e -> {
+            if (selectedItemId > 0) {
+                handleUpdateItem();
+            } else {
+                handleAddItem();
             }
         });
 
-        return field;
+        // Debounced live search (also reacts to paste / cut)
+        searchDebounce = new javax.swing.Timer(140, e -> applySearchAndFilter());
+        searchDebounce.setRepeats(false);
+        txtSearch.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                searchDebounce.restart();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                searchDebounce.restart();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                searchDebounce.restart();
+            }
+        });
+
+        itemTable.getSelectionModel().addListSelectionListener(e -> {
+            int r = itemTable.getSelectedRow();
+            if (!e.getValueIsAdjusting() && r >= 0) {
+                setStatus("Editing item #" + tableModel.getValueAt(r, 0)
+                        + "  |  Change the fields, then press Update Item");
+            }
+        });
+        setStatus("Ready  |  Select a row to edit or delete. Click a KPI card to filter.");
     }
+
+    // =====================================================================
+    // Data / dashboard / filtering
+    // =====================================================================
 
     private void populateSampleData() {
         manager.addItem(new InventoryItem(0, "Apple MacBook Pro 16\" M3 Max", "Electronics", 980000.00, 6));
@@ -590,11 +701,61 @@ public class InventoryGUI extends JFrame {
     }
 
     public void updateDashboard() {
-        lblTotalItems.setText(String.valueOf(manager.getItemCount()));
-        lblTotalUnits.setText(String.valueOf(manager.getTotalUnits()));
-        lblNetWorth.setText(String.format("PKR %,.2f", manager.getTotalInventoryValue()));
-        lblLowStock.setText(String.valueOf(manager.getLowStockCount()));
-        lblOutOfStock.setText(String.valueOf(manager.getOutOfStockCount()));
+        DoubleFunction<String> asInt = v -> String.valueOf(Math.round(v));
+        animateValue(lblTotalItems, manager.getItemCount(), asInt);
+        animateValue(lblTotalUnits, manager.getTotalUnits(), asInt);
+        animateValue(lblNetWorth, manager.getTotalInventoryValue(), v -> String.format("PKR %,.2f", v));
+        animateValue(lblLowStock, manager.getLowStockCount(), asInt);
+        animateValue(lblOutOfStock, manager.getOutOfStockCount(), asInt);
+        syncKpiHighlight();
+    }
+
+    /** Smoothly counts a KPI label from its previous value to the new target. */
+    private void animateValue(JLabel label, double target, DoubleFunction<String> format) {
+        if (label.getClientProperty("animTimer") instanceof javax.swing.Timer old) {
+            old.stop();
+        }
+        final double start = label.getClientProperty("animValue") instanceof Double d ? d : 0.0;
+        label.putClientProperty("animValue", target);
+        if (start == target) {
+            label.setText(format.apply(target));
+            return;
+        }
+        final int steps = 14;
+        final int[] tick = {0};
+        final javax.swing.Timer timer = new javax.swing.Timer(18, null);
+        timer.addActionListener(ev -> {
+            tick[0]++;
+            double p = Math.min(1.0, tick[0] / (double) steps);
+            double eased = 1 - Math.pow(1 - p, 3);
+            label.setText(format.apply(start + (target - start) * eased));
+            if (tick[0] >= steps) {
+                label.setText(format.apply(target));
+                timer.stop();
+            }
+        });
+        label.putClientProperty("animTimer", timer);
+        timer.start();
+    }
+
+    private void syncKpiHighlight() {
+        if (comboStatusFilter == null) {
+            return;
+        }
+        String status = (String) comboStatusFilter.getSelectedItem();
+        String active = switch (status == null ? ALL_STATUSES : status) {
+            case "Low Stock" -> KPI_LOW;
+            case "Out of Stock" -> KPI_OUT;
+            case "In Stock" -> "";
+            default -> KPI_ITEMS;
+        };
+        kpiCards.forEach((name, card) -> card.setHighlighted(name.equals(active)));
+    }
+
+    private void setStatus(String msg) {
+        if (lblStatusMsg != null) {
+            lblStatusMsg.setText(msg);
+        }
     }
 
     private void applySearchAndFilter() {
@@ -604,103 +765,114 @@ public class InventoryGUI extends JFrame {
 
         List<InventoryItem> filtered = manager.searchByName(query);
 
-        if (selectedCat != null && !selectedCat.equals("All Categories")) {
+        if (selectedCat != null && !selectedCat.equals(ALL_CATEGORIES)) {
             filtered = filtered.stream()
                     .filter(i -> i.getCategory().equalsIgnoreCase(selectedCat))
                     .toList();
         }
 
-        if (selectedStatus != null && !selectedStatus.equals("All Statuses")) {
-            StockStatus target = null;
-            if (selectedStatus.equals("In Stock")) target = StockStatus.IN_STOCK;
-            else if (selectedStatus.equals("Low Stock")) target = StockStatus.LOW_STOCK;
-            else if (selectedStatus.equals("Out of Stock")) target = StockStatus.OUT_OF_STOCK;
-
-            if (target != null) {
-                final StockStatus fTarget = target;
-                filtered = filtered.stream().filter(i -> i.getStatus() == fTarget).toList();
-            }
+        StockStatus target = statusFromLabel(selectedStatus);
+        if (target != null) {
+            filtered = filtered.stream().filter(i -> i.getStatus() == target).toList();
         }
 
         renderItems(filtered);
+        syncKpiHighlight();
+        setStatus("Showing " + filtered.size() + " of " + manager.getItemCount() + " items"
+                + (target != null ? "  |  Status: " + selectedStatus : ""));
     }
 
-    private void handleAddItem() {
-        String name = txtName.getText();
-        String category = (String) comboCategory.getSelectedItem();
-        String priceText = txtPrice.getText();
-        String qtyText = txtQuantity.getText();
+    private static StockStatus statusFromLabel(String label) {
+        if (label == null) {
+            return null;
+        }
+        return switch (label) {
+            case "In Stock" -> StockStatus.IN_STOCK;
+            case "Low Stock" -> StockStatus.LOW_STOCK;
+            case "Out of Stock" -> StockStatus.OUT_OF_STOCK;
+            default -> null;
+        };
+    }
 
-        if (name == null || name.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Validation Error: Item name cannot be empty.",
-                    "Input Validation Error", JOptionPane.WARNING_MESSAGE);
+    private static StockStatus statusFromIndex(int index) {
+        return switch (index) {
+            case 1 -> StockStatus.IN_STOCK;
+            case 2 -> StockStatus.LOW_STOCK;
+            case 3 -> StockStatus.OUT_OF_STOCK;
+            default -> null; // Auto
+        };
+    }
+
+    // =====================================================================
+    // CRUD handlers
+    // =====================================================================
+
+    /** Validates the form. Shows a dialog and returns null on the first error. */
+    private FormData readAndValidateForm() {
+        String name = txtName.getText() == null ? "" : txtName.getText().trim();
+        String category = (String) comboCategory.getSelectedItem();
+
+        if (name.isEmpty()) {
+            showError("Validation Error: Item name cannot be empty.", JOptionPane.WARNING_MESSAGE);
             txtName.requestFocus();
-            return;
+            return null;
         }
 
         double price;
         try {
-            String sanitized = priceText.trim()
-                    .replace("PKR", "")
-                    .replace("pkr", "")
-                    .replace("Rs.", "")
-                    .replace("Rs", "")
-                    .replace("$", "")
-                    .replace(",", "")
-                    .trim();
-            price = Double.parseDouble(sanitized);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Validation Error: Unit price must be a valid number (e.g. 25000).",
-                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
+            price = parsePrice(txtPrice.getText());
+        } catch (NumberFormatException e) {
+            showError("Validation Error: Unit price must be a valid number (e.g. 25000).", JOptionPane.ERROR_MESSAGE);
             txtPrice.requestFocus();
-            return;
+            return null;
         }
-
         if (price < 0.0) {
-            JOptionPane.showMessageDialog(this,
-                    "Validation Error: Unit price cannot be negative.",
-                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
+            showError("Validation Error: Unit price cannot be negative.", JOptionPane.ERROR_MESSAGE);
             txtPrice.requestFocus();
-            return;
+            return null;
         }
 
         int quantity;
         try {
-            quantity = Integer.parseInt(qtyText.trim());
+            quantity = Integer.parseInt(txtQuantity.getText().trim());
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this,
-                    "Validation Error: Quantity must be a valid integer number.",
-                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
+            showError("Validation Error: Quantity must be a valid integer number.", JOptionPane.ERROR_MESSAGE);
             txtQuantity.requestFocus();
-            return;
+            return null;
         }
-
         if (quantity < 0) {
-            JOptionPane.showMessageDialog(this,
-                    "Validation Error: Quantity cannot be negative (" + quantity + ").",
-                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
+            showError("Validation Error: Quantity cannot be negative (" + quantity + ").", JOptionPane.ERROR_MESSAGE);
             txtQuantity.requestFocus();
+            return null;
+        }
+
+        return new FormData(name, category, price, quantity, statusFromIndex(comboStatus.getSelectedIndex()));
+    }
+
+    private static double parsePrice(String text) {
+        String sanitized = text == null ? "" : text.replaceAll("(?i)pkr|rs\\.?|\\$|,", "").trim();
+        return Double.parseDouble(sanitized);
+    }
+
+    private void showError(String message, int type) {
+        JOptionPane.showMessageDialog(this, message, "Input Validation Error", type);
+    }
+
+    private void handleAddItem() {
+        FormData f = readAndValidateForm();
+        if (f == null) {
             return;
         }
 
-        StockStatus status = null;
-        int statusIndex = comboStatus.getSelectedIndex();
-        if (statusIndex == 1) status = StockStatus.IN_STOCK;
-        else if (statusIndex == 2) status = StockStatus.LOW_STOCK;
-        else if (statusIndex == 3) status = StockStatus.OUT_OF_STOCK;
-
-        InventoryItem newItem = new InventoryItem(0, name.trim(), category, price, quantity, status);
+        InventoryItem newItem = new InventoryItem(0, f.name(), f.category(), f.price(), f.quantity(), f.status());
         manager.addItem(newItem);
 
         JOptionPane.showMessageDialog(this,
-                "Success! Item \"" + newItem.getName() + "\" added with ID #" + newItem.getId() + " (" + newItem.getStatus().getDisplayName() + ").",
+                "Success! Item \"" + newItem.getName() + "\" added with ID #" + newItem.getId()
+                        + " (" + newItem.getStatus().getDisplayName() + ").",
                 "Item Added", JOptionPane.INFORMATION_MESSAGE);
 
-        clearForm();
-        refreshTable();
-        updateDashboard();
+        afterChange();
     }
 
     private void handleUpdateItem() {
@@ -711,75 +883,18 @@ public class InventoryGUI extends JFrame {
             return;
         }
 
-        String name = txtName.getText();
-        String category = (String) comboCategory.getSelectedItem();
-        String priceText = txtPrice.getText();
-        String qtyText = txtQuantity.getText();
-
-        if (name == null || name.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Validation Error: Item name cannot be empty.",
-                    "Input Validation Error", JOptionPane.WARNING_MESSAGE);
+        FormData f = readAndValidateForm();
+        if (f == null) {
             return;
         }
 
-        double price;
-        try {
-            String sanitized = priceText.trim()
-                    .replace("PKR", "")
-                    .replace("pkr", "")
-                    .replace("Rs.", "")
-                    .replace("Rs", "")
-                    .replace("$", "")
-                    .replace(",", "")
-                    .trim();
-            price = Double.parseDouble(sanitized);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Validation Error: Unit price must be a valid number.",
-                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        if (price < 0.0) {
-            JOptionPane.showMessageDialog(this,
-                    "Validation Error: Unit price cannot be negative.",
-                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        int quantity;
-        try {
-            quantity = Integer.parseInt(qtyText.trim());
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this,
-                    "Validation Error: Quantity must be a valid integer number.",
-                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        if (quantity < 0) {
-            JOptionPane.showMessageDialog(this,
-                    "Validation Error: Quantity cannot be negative.",
-                    "Input Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        StockStatus status = null;
-        int statusIndex = comboStatus.getSelectedIndex();
-        if (statusIndex == 1) status = StockStatus.IN_STOCK;
-        else if (statusIndex == 2) status = StockStatus.LOW_STOCK;
-        else if (statusIndex == 3) status = StockStatus.OUT_OF_STOCK;
-
-        boolean updated = manager.updateItem(selectedItemId, name.trim(), category, price, quantity, status);
+        boolean updated = manager.updateItem(selectedItemId, f.name(), f.category(), f.price(), f.quantity(), f.status());
 
         if (updated) {
             JOptionPane.showMessageDialog(this,
                     "Item #" + selectedItemId + " successfully updated!",
                     "Item Updated", JOptionPane.INFORMATION_MESSAGE);
-            clearForm();
-            refreshTable();
-            updateDashboard();
+            afterChange();
         } else {
             JOptionPane.showMessageDialog(this,
                     "Item with ID #" + selectedItemId + " does not exist in the inventory.",
@@ -803,20 +918,24 @@ public class InventoryGUI extends JFrame {
                 "Confirm Deletion", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            boolean deleted = manager.deleteItem(selectedItemId);
-            if (deleted) {
+            if (manager.deleteItem(selectedItemId)) {
                 JOptionPane.showMessageDialog(this,
                         "Item #" + selectedItemId + " removed successfully.",
                         "Item Deleted", JOptionPane.INFORMATION_MESSAGE);
-                clearForm();
-                refreshTable();
-                updateDashboard();
+                afterChange();
             } else {
                 JOptionPane.showMessageDialog(this,
                         "Could not delete item. It may have already been removed.",
                         "Deletion Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    /** Common post-CRUD refresh: reset form, re-apply active filters, update KPIs. */
+    private void afterChange() {
+        clearForm();
+        applySearchAndFilter();
+        updateDashboard();
     }
 
     private void handleExportCSV() {
@@ -832,8 +951,7 @@ public class InventoryGUI extends JFrame {
         fileChooser.setSelectedFile(new File("inventory_report.csv"));
         fileChooser.setFileFilter(new FileNameExtensionFilter("CSV Comma-Separated Values (*.csv)", "csv"));
 
-        int userSelection = fileChooser.showSaveDialog(this);
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             File fileToSave = fileChooser.getSelectedFile();
             if (!fileToSave.getName().toLowerCase().endsWith(".csv")) {
                 fileToSave = new File(fileToSave.getParentFile(), fileToSave.getName() + ".csv");
@@ -854,32 +972,25 @@ public class InventoryGUI extends JFrame {
 
     private void populateFormFromSelectedRow(int row) {
         selectedItemId = (int) tableModel.getValueAt(row, 0);
-        String name = (String) tableModel.getValueAt(row, 1);
-        String category = (String) tableModel.getValueAt(row, 2);
-        String rawPrice = (String) tableModel.getValueAt(row, 3);
-        String priceStr = rawPrice
-                .replace("PKR", "")
-                .replace("pkr", "")
-                .replace("Rs.", "")
-                .replace("Rs", "")
-                .replace("$", "")
-                .replace(",", "")
-                .trim();
-        int quantity = (int) tableModel.getValueAt(row, 4);
-        StockStatus status = (StockStatus) tableModel.getValueAt(row, 6);
 
-        txtId.setText(String.valueOf(selectedItemId));
-        txtName.setText(name);
-        comboCategory.setSelectedItem(category);
-        txtPrice.setText(priceStr);
-        txtQuantity.setText(String.valueOf(quantity));
+        // Read raw values from the model layer instead of parsing formatted table strings
+        Optional<InventoryItem> opt = manager.findById(selectedItemId);
+        if (opt.isEmpty()) {
+            return;
+        }
+        InventoryItem item = opt.get();
 
-        if (status == StockStatus.IN_STOCK) {
-            comboStatus.setSelectedIndex(1);
-        } else if (status == StockStatus.LOW_STOCK) {
-            comboStatus.setSelectedIndex(2);
-        } else if (status == StockStatus.OUT_OF_STOCK) {
-            comboStatus.setSelectedIndex(3);
+        txtId.setText(String.valueOf(item.getId()));
+        txtName.setText(item.getName());
+        comboCategory.setSelectedItem(item.getCategory());
+        txtPrice.setText(String.valueOf(item.getUnitPrice()));
+        txtQuantity.setText(String.valueOf(item.getQuantity()));
+
+        switch (item.getStatus()) {
+            case IN_STOCK -> comboStatus.setSelectedIndex(1);
+            case LOW_STOCK -> comboStatus.setSelectedIndex(2);
+            case OUT_OF_STOCK -> comboStatus.setSelectedIndex(3);
+            default -> comboStatus.setSelectedIndex(0);
         }
     }
 
@@ -894,25 +1005,189 @@ public class InventoryGUI extends JFrame {
         itemTable.clearSelection();
     }
 
+    // =====================================================================
+    // Row colors + renderers
+    // =====================================================================
+
+    private static Color rowBackground(JTable t, boolean selected, int row) {
+        if (selected) {
+            return SELECTION_BG;
+        }
+        if (t.getClientProperty("hoverRow") instanceof Integer r && r == row) {
+            return ROW_HOVER;
+        }
+        return row % 2 == 0 ? Color.WHITE : ROW_ALT;
+    }
+
+    /** Deep-blue header with white bold text. */
+    private static class HeaderRenderer extends DefaultTableCellRenderer {
+        private static final long serialVersionUID = 1L;
+        private final int[] align;
+
+        HeaderRenderer(int[] align) {
+            this.align = align;
+            setOpaque(true);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable t, Object value, boolean sel,
+                                                       boolean foc, int r, int c) {
+            super.getTableCellRendererComponent(t, value, false, false, r, c);
+            setFont(F_SMALL_BOLD);
+            setForeground(Color.WHITE);
+            setBackground(TABLE_HEADER_BG);
+            setHorizontalAlignment(align[c]);
+            setBorder(new EmptyBorder(0, 10, 0, 10));
+            return this;
+        }
+    }
+
+    /** One shared text renderer: zebra, hover tint, soft-blue selection and accent bar on the ID cell. */
+    private static class CellRenderer extends DefaultTableCellRenderer {
+        private static final long serialVersionUID = 1L;
+        private static final Border PLAIN = new EmptyBorder(0, 10, 0, 10);
+        private static final Border SELECTED_ID = new CompoundBorder(
+                new MatteBorder(0, 4, 0, 0, COLOR_TOTAL_ITEMS), new EmptyBorder(0, 6, 0, 10));
+        private final int[] align;
+
+        CellRenderer(int[] align) {
+            this.align = align;
+            setOpaque(true);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable t, Object value, boolean sel,
+                                                       boolean focus, int row, int col) {
+            super.getTableCellRendererComponent(t, value, sel, false, row, col);
+            setFont(col == 1 ? F_BOLD : F_REGULAR);
+            setBackground(rowBackground(t, sel, row));
+            setForeground(col == 7 && !sel ? TEXT_MUTED : TEXT_PRIMARY);
+            setHorizontalAlignment(align[col]);
+            setBorder(col == 0 && sel ? SELECTED_ID : PLAIN);
+            return this;
+        }
+    }
+
+    /** Single reusable pill-badge renderer for the Stock Status column. */
+    private static class StatusBadgeRenderer extends JComponent implements TableCellRenderer {
+        private static final long serialVersionUID = 1L;
+        private StockStatus status;
+        private Color rowBg = Color.WHITE;
+
+        StatusBadgeRenderer() {
+            setFont(F_SMALL_BOLD);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus, int row, int column) {
+            status = value instanceof StockStatus s ? s : null;
+            rowBg = rowBackground(table, isSelected, row);
+            return this;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+            g2.setColor(rowBg);
+            g2.fillRect(0, 0, getWidth(), getHeight());
+
+            if (status != null) {
+                Color pillBg;
+                Color pillFg;
+                switch (status) {
+                    case IN_STOCK -> {
+                        pillBg = new Color(0xDC, 0xFC, 0xE7); // #DCFCE7
+                        pillFg = new Color(0x16, 0x65, 0x34); // #166534
+                    }
+                    case LOW_STOCK -> {
+                        pillBg = new Color(0xFE, 0xF3, 0xC7); // #FEF3C7
+                        pillFg = new Color(0x92, 0x40, 0x0E); // #92400E
+                    }
+                    default -> {
+                        pillBg = new Color(0xFE, 0xE2, 0xE2); // #FEE2E2
+                        pillFg = new Color(0x99, 0x1B, 0x1B); // #991B1B
+                    }
+                }
+
+                String text = status.getDisplayName();
+                FontMetrics fm = g2.getFontMetrics(getFont());
+                int dot = 6;
+                int pillW = fm.stringWidth(text) + dot + 34;
+                int pillH = 26;
+                int pillX = (getWidth() - pillW) / 2;
+                int pillY = (getHeight() - pillH) / 2;
+
+                g2.setColor(pillBg);
+                g2.fillRoundRect(pillX, pillY, pillW, pillH, pillH, pillH);
+
+                g2.setColor(pillFg);
+                g2.fillOval(pillX + 12, pillY + (pillH - dot) / 2, dot, dot);
+
+                g2.setFont(getFont());
+                g2.drawString(text, pillX + 12 + dot + 6,
+                        pillY + (pillH - fm.getHeight()) / 2 + fm.getAscent());
+            }
+            g2.dispose();
+        }
+    }
+
+    // =====================================================================
+    // Custom components
+    // =====================================================================
+
+    /**
+     * Rounded panel with border, optional left accent strip and an optional solid-color KPI mode
+     * with hover and highlight states.
+     */
     public static class RoundedPanel extends JPanel {
         private static final long serialVersionUID = 1L;
         private final int radius;
         private final Color bgColor;
         private final Color borderColor;
-        private final Color leftAccentColor;
-        private final int leftAccentWidth;
+        private final Color accentColor;
+        private final int accentWidth;
+        private final boolean solid;
+        private boolean highlighted;
+        private boolean hovered;
 
         public RoundedPanel(int radius, Color bgColor, Color borderColor) {
-            this(radius, bgColor, borderColor, null, 0);
+            this(radius, bgColor, borderColor, null, 0, false);
         }
 
-        public RoundedPanel(int radius, Color bgColor, Color borderColor, Color leftAccentColor, int leftAccentWidth) {
+        public RoundedPanel(int radius, Color bgColor, Color borderColor, Color accentColor,
+                            int accentWidth, boolean solid) {
             this.radius = radius;
             this.bgColor = bgColor;
             this.borderColor = borderColor;
-            this.leftAccentColor = leftAccentColor;
-            this.leftAccentWidth = leftAccentWidth;
+            this.accentColor = accentColor;
+            this.accentWidth = accentWidth;
+            this.solid = solid;
             setOpaque(false);
+        }
+
+        public void setHighlighted(boolean value) {
+            if (highlighted != value) {
+                highlighted = value;
+                repaint();
+            }
+        }
+
+        public void setHovered(boolean value) {
+            if (hovered != value) {
+                hovered = value;
+                repaint();
+            }
+        }
+
+        private static Color mix(Color a, Color b, float ratio) {
+            return new Color(
+                    Math.round(a.getRed() * (1 - ratio) + b.getRed() * ratio),
+                    Math.round(a.getGreen() * (1 - ratio) + b.getGreen() * ratio),
+                    Math.round(a.getBlue() * (1 - ratio) + b.getBlue() * ratio));
         }
 
         @Override
@@ -920,53 +1195,75 @@ public class InventoryGUI extends JFrame {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            g2.setColor(bgColor);
+            Color fill = bgColor;
+            Color edge = borderColor;
+            float stroke = 1f;
+            if (solid) {
+                if (hovered && !highlighted) {
+                    fill = mix(bgColor, Color.WHITE, 0.12f);
+                }
+                if (highlighted) {
+                    edge = Color.WHITE;
+                    stroke = 2.5f;
+                } else {
+                    edge = mix(bgColor, Color.BLACK, 0.15f);
+                }
+            }
+
+            g2.setColor(fill);
             g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
 
-            if (leftAccentColor != null && leftAccentWidth > 0) {
+            if (accentColor != null && accentWidth > 0) {
                 Shape oldClip = g2.getClip();
                 g2.clip(new RoundRectangle2D.Float(0, 0, getWidth() - 1, getHeight() - 1, radius, radius));
-                g2.setColor(leftAccentColor);
-                g2.fillRect(0, 0, leftAccentWidth, getHeight());
+                g2.setColor(solid ? mix(accentColor, Color.WHITE, 0.65f) : accentColor);
+                g2.fillRect(0, 0, accentWidth, getHeight());
                 g2.setClip(oldClip);
             }
 
-            if (borderColor != null) {
-                g2.setColor(borderColor);
+            if (edge != null) {
+                g2.setColor(edge);
+                g2.setStroke(new BasicStroke(stroke));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
             }
-
             g2.dispose();
             super.paintComponent(g);
         }
     }
 
+    /** Solid rounded button with hover / pressed states and high-contrast text. */
     public static class RoundedButton extends JButton {
         private static final long serialVersionUID = 1L;
         private final Color normalBg;
         private final Color hoverBg;
+        private final Color pressedBg;
         private final int radius;
 
         public RoundedButton(String text, Color bg, Color fg, int radius) {
             super(text);
             this.normalBg = bg;
             this.hoverBg = blend(bg, Color.BLACK, 0.12f);
+            this.pressedBg = blend(bg, Color.BLACK, 0.22f);
             this.radius = radius;
-            setFont(new Font("Segoe UI", Font.BOLD, 12));
+            setFont(F_SMALL_BOLD);
             setForeground(fg);
             setContentAreaFilled(false);
             setFocusPainted(false);
             setBorderPainted(false);
             setOpaque(false);
+            setRolloverEnabled(true);
             setCursor(new Cursor(Cursor.HAND_CURSOR));
-            setBorder(new EmptyBorder(8, 12, 8, 12));
+            setBorder(new EmptyBorder(10, 14, 10, 14));
         }
 
         @Override
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(getModel().isRollover() ? hoverBg : normalBg);
+            Color c = !isEnabled() ? blend(normalBg, Color.WHITE, 0.5f)
+                    : getModel().isPressed() ? pressedBg
+                    : getModel().isRollover() ? hoverBg : normalBg;
+            g2.setColor(c);
             g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
             g2.dispose();
             super.paintComponent(g);
@@ -977,81 +1274,6 @@ public class InventoryGUI extends JFrame {
             float g = c1.getGreen() * (1 - ratio) + c2.getGreen() * ratio;
             float b = c1.getBlue() * (1 - ratio) + c2.getBlue() * ratio;
             return new Color((int) r, (int) g, (int) b);
-        }
-    }
-
-    private static class StatusBadgeRenderer extends DefaultTableCellRenderer {
-        private static final long serialVersionUID = 1L;
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                                                       boolean isSelected, boolean hasFocus, int row, int column) {
-            return new PillBadgeComponent(value instanceof StockStatus ? (StockStatus) value : null,
-                    isSelected, table.getSelectionBackground());
-        }
-
-        private static class PillBadgeComponent extends JComponent {
-            private static final long serialVersionUID = 1L;
-            private final StockStatus status;
-            private final boolean isSelected;
-            private final Color selectionBg;
-
-            PillBadgeComponent(StockStatus status, boolean isSelected, Color selectionBg) {
-                this.status = status;
-                this.isSelected = isSelected;
-                this.selectionBg = selectionBg;
-                setFont(new Font("Segoe UI", Font.BOLD, 12));
-            }
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                if (isSelected) {
-                    g2.setColor(selectionBg);
-                    g2.fillRect(0, 0, getWidth(), getHeight());
-                }
-
-                if (status != null) {
-                    Color pillBg;
-                    Color pillFg;
-
-                    switch (status) {
-                        case IN_STOCK:
-                            pillBg = new Color(0xDC, 0xFC, 0xE7); // #DCFCE7
-                            pillFg = new Color(0x16, 0x65, 0x34); // #166534
-                            break;
-                        case LOW_STOCK:
-                            pillBg = new Color(0xFE, 0xF3, 0xC7); // #FEF3C7
-                            pillFg = new Color(0x92, 0x40, 0x0E); // #92400E
-                            break;
-                        case OUT_OF_STOCK:
-                        default:
-                            pillBg = new Color(0xFE, 0xE2, 0xE2); // #FEE2E2
-                            pillFg = new Color(0x99, 0x1B, 0x1B); // #991B1B
-                            break;
-                    }
-
-                    String text = status.getDisplayName();
-                    FontMetrics fm = g2.getFontMetrics(getFont());
-                    int textW = fm.stringWidth(text);
-                    int textH = fm.getAscent();
-
-                    int pillW = textW + 24;
-                    int pillH = 26;
-                    int pillX = (getWidth() - pillW) / 2;
-                    int pillY = (getHeight() - pillH) / 2;
-
-                    g2.setColor(pillBg);
-                    g2.fillRoundRect(pillX, pillY, pillW, pillH, 14, 14);
-
-                    g2.setColor(pillFg);
-                    g2.setFont(getFont());
-                    g2.drawString(text, pillX + (pillW - textW) / 2, pillY + (pillH + textH) / 2 - 2);
-                }
-                g2.dispose();
-            }
         }
     }
 }
